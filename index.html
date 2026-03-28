@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GloveOS · Engineering Interface</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0d1117;
+  --panel:    #161b22;
+  --border:   #21262d;
+  --accent:   #58a6ff;
+  --success:  #3fb950;
+  --danger:   #f85149;
+  --warn:     #d29922;
+  --text:     #c9d1d9;
+  --dim:      #8b949e;
+  --mono:     'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--mono);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── Header ── */
+.eng-header {
+  height: 48px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 24px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.eng-header .logo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.header-metrics {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.hm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.hm-lbl { color: var(--dim); }
+.hm-val { color: var(--text); font-weight: 500; }
+.hm-val.ok   { color: var(--success); }
+.hm-val.warn { color: var(--warn); }
+.hm-val.err  { color: var(--danger); }
+
+.header-btns {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Layout ── */
+.eng-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  flex: 1;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+.eng-main {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+
+/* ── Panels ── */
+.panel {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--dim);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+/* ── Chart panel ── */
+.chart-panel { position: relative; }
+
+.chart-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.chart-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--dim);
+  cursor: pointer;
+}
+
+.legend-dot {
+  width: 10px; height: 3px;
+  border-radius: 2px;
+}
+
+/* ── Gauge panel ── */
+.gauge-panel {
+  flex-direction: row;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.svgwrap { flex-shrink: 0; }
+
+.bars-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.finger-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.finger-label {
+  font-size: 11px;
+  color: var(--dim);
+  width: 46px;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: #0d1117;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+.bar-fill-cv {
+  height: 100%;
+  border-radius: 4px;
+  width: 0%;
+  position: absolute;
+  top: 0; left: 0;
+  opacity: 0.45;
+  transition: width 0.05s linear;
+  display: none;
+}
+
+.pct-label {
+  font-size: 11px;
+  color: var(--text);
+  width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.delta-label {
+  font-size: 10px;
+  color: var(--warn);
+  width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  display: none;
+}
+
+.stats-row {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  flex: 1;
+  min-width: 80px;
+}
+
+.stat-card .val {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card .lbl {
+  font-size: 10px;
+  color: var(--dim);
+  margin-top: 1px;
+  letter-spacing: 0.4px;
+}
+
+/* ── Sidebar ── */
+.eng-sidebar {
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.api-key-row {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.api-key-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 8px;
+  outline: none;
+}
+
+.api-key-row input:focus { border-color: var(--accent); }
+
+.anomaly-bar {
+  padding: 8px 16px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  min-height: 32px;
+  color: var(--dim);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.anomaly-tag {
+  background: #2d1f00;
+  border: 1px solid var(--warn);
+  color: var(--warn);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.anomaly-tag.jitter { border-color: var(--danger); color: var(--danger); background: #2d0f0f; }
+.anomaly-tag.ok { border-color: var(--success); color: var(--success); background: #0f2d1a; }
+
+.analysis-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.log-ts {
+  font-size: 10px;
+  color: var(--dim);
+}
+
+.log-text {
+  font-size: 11px;
+  color: var(--text);
+  line-height: 1.5;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-entry.log-assistant .log-text { border-color: #1f3a5c; background: #0d1a2a; }
+.log-entry.log-error .log-text     { border-color: #3a1f1f; color: var(--danger); }
+.log-entry.log-system .log-text    { color: var(--dim); font-style: italic; }
+
+/* ── Footer ── */
+.eng-footer {
+  height: 56px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.footer-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-sep {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+
+.cal-grid {
+  display: flex;
+  gap: 6px;
+}
+
+.cal-finger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.cal-finger-label {
+  font-size: 9px;
+  color: var(--dim);
+  letter-spacing: 0.5px;
+}
+
+.cal-finger-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.cal-range {
+  font-size: 9px;
+  color: var(--dim);
+}
+
+/* ── Buttons ── */
+.eng-btn {
+  background: #1f2d3d;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 12px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.eng-btn:hover { border-color: var(--accent); background: #1f3a5c; }
+.eng-btn.active { border-color: var(--accent); color: var(--accent); background: #0d1a2a; }
+.eng-btn.danger { border-color: var(--danger); color: var(--danger); background: #2d0f0f; }
+.eng-btn.success { border-color: var(--success); color: var(--success); background: #0f2d1a; }
+.eng-btn.sm { padding: 3px 8px; font-size: 11px; }
+.eng-btn.min-btn { border-color: #1f3a5c; color: #58a6ff88; }
+.eng-btn.min-btn:hover { border-color: var(--accent); color: var(--accent); }
+.eng-btn.max-btn { border-color: #3a1f5c; color: #bc8cff88; }
+.eng-btn.max-btn:hover { border-color: #bc8cff; color: #bc8cff; }
+
+/* ── Connection input ── */
+.ws-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 10px;
+  outline: none;
+  width: 200px;
+}
+
+.ws-input:focus { border-color: var(--accent); }
+
+/* ── Status dot ── */
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #555;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.connected    { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.status-dot.connecting   { background: var(--warn); }
+.status-dot.disconnected { background: var(--danger); }
+
+/* ── CV preview overlay ── */
+.cv-container {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 5;
+  display: none;
+}
+
+.cv-container.visible { display: block; }
+
+#cvPreview {
+  width: 120px;
+  height: 90px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #000;
+  display: block;
+}
+
+.cv-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  background: var(--success);
+  color: #000;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.cv-warn {
+  font-size: 10px;
+  color: var(--warn);
+  padding: 4px 0;
+  display: none;
+}
+
+/* ── Accuracy badge ── */
+.accuracy-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  display: none;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* SVG finger fill colors */
+.svg-f0 { fill: #6c8ef5; }
+.svg-f1 { fill: #5ec4a0; }
+.svg-f2 { fill: #f0a050; }
+.svg-f3 { fill: #d97ab8; }
+.svg-f4 { fill: #7ecff0; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="eng-header">
+  <div class="logo">GLOVEOS</div>
+  <div class="header-metrics">
+    <div class="hm"><span class="hm-lbl">WS</span><span class="hm-val" id="hmWs">OFFLINE</span></div>
+    <div class="hm"><span class="hm-lbl">Hz</span><span class="hm-val" id="hmHz">—</span></div>
+    <div class="hm"><span class="hm-lbl">LAT</span><span class="hm-val" id="hmLat">—</span></div>
+    <div class="hm"><span class="hm-lbl">PKTS</span><span class="hm-val" id="hmPkts">—</span></div>
+    <div class="hm"><span class="hm-lbl">CV</span><span class="hm-val" id="hmCv">OFF</span></div>
+    <span class="accuracy-badge" id="accuracyBadge"></span>
+  </div>
+  <div class="header-btns">
+    <button class="eng-btn" id="cvBtn" onclick="toggleCV()">Enable CV</button>
+    <button class="eng-btn" id="cmpBtn" onclick="toggleComparison()">HW vs CV</button>
+    <button class="eng-btn" id="autoCalBtn" onclick="startAutoCalibration()">Auto-Cal</button>
+  </div>
+</header>
+
+<!-- ── Main layout ── -->
+<div class="eng-layout">
+  <main class="eng-main">
+
+    <!-- Chart panel -->
+    <section class="panel chart-panel">
+      <div class="panel-label">Signal History · 10s</div>
+      <div class="chart-legend" id="chartLegend"></div>
+      <div class="chart-wrap">
+        <canvas id="fingerChart"></canvas>
+      </div>
+      <div class="cv-container" id="cvContainer">
+        <canvas id="cvPreview" width="160" height="120"></canvas>
+        <div class="cv-badge">CV</div>
+      </div>
+      <div class="cv-warn" id="cvWarn">Camera unavailable — open as file:/// or use HTTPS</div>
+    </section>
+
+    <!-- Gauge panel -->
+    <section class="panel gauge-panel">
+      <div class="svgwrap">
+        <svg id="handSvg" width="160" height="260" viewBox="0 0 200 320">
+          <rect x="48" y="180" width="108" height="100" rx="16" fill="#1e2235" stroke="#21262d" stroke-width="1"/>
+          <g id="finger-thumb">
+            <rect id="seg-thumb-3" x="18" y="218" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-thumb-2" x="14" y="186" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-thumb-1" x="10" y="154" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+          </g>
+          <g id="finger-index">
+            <rect id="seg-index-3" x="56" y="148" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-index-2" x="56" y="110" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-index-1" x="56" y="72"  width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+          </g>
+          <g id="finger-middle">
+            <rect id="seg-middle-3" x="87" y="140" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-middle-2" x="87" y="100" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-middle-1" x="87" y="62"  width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+          </g>
+          <g id="finger-ring">
+            <rect id="seg-ring-3" x="118" y="145" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-ring-2" x="118" y="107" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-ring-1" x="118" y="69"  width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
+          </g>
+          <g id="finger-pinky">
+            <rect id="seg-pinky-3" x="149" y="158" width="26" height="28" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-pinky-2" x="149" y="126" width="26" height="28" rx="7" fill="#21262d" opacity="0.4"/>
+            <rect id="seg-pinky-1" x="149" y="96"  width="26" height="26" rx="7" fill="#21262d" opacity="0.4"/>
+          </g>
+          <text x="23"  y="315" text-anchor="middle" font-size="10" fill="#555">T</text>
+          <text x="69"  y="315" text-anchor="middle" font-size="10" fill="#555">I</text>
+          <text x="100" y="315" text-anchor="middle" font-size="10" fill="#555">M</text>
+          <text x="131" y="315" text-anchor="middle" font-size="10" fill="#555">R</text>
+          <text x="162" y="315" text-anchor="middle" font-size="10" fill="#555">P</text>
+        </svg>
+      </div>
+
+      <div class="bars-wrap">
+        <div style="font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Extension %</div>
+        <div id="barsContainer"></div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="val" id="statHz">—</div><div class="lbl">Hz</div></div>
+          <div class="stat-card"><div class="val" id="statAvg">—</div><div class="lbl">Avg ext</div></div>
+          <div class="stat-card"><div class="val" id="statPeak">—</div><div class="lbl">Peak</div></div>
+          <div class="stat-card"><div class="val" id="statDropped">0</div><div class="lbl">Drops</div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Sidebar -->
+  <aside class="eng-sidebar">
+    <div class="sidebar-header">
+      <span class="panel-label" style="margin:0">ANALYSIS</span>
+      <button class="eng-btn sm" onclick="triggerClaudeAnalysis()">Analyze Now</button>
+    </div>
+    <div class="api-key-row">
+      <input type="password" id="claudeKeyInput" placeholder="sk-ant-api… (Claude API key)" />
+      <button class="eng-btn sm" onclick="saveApiKey()">Save</button>
+    </div>
+    <div class="anomaly-bar" id="anomalyBar"><span style="color:var(--dim);font-size:11px;">No anomalies</span></div>
+    <div class="analysis-log" id="analysisLog"></div>
+  </aside>
+</div>
+
+<!-- ── Footer ── -->
+<footer class="eng-footer">
+  <div class="status-dot" id="statusDot"></div>
+  <input class="ws-input" type="text" id="wsUrl" value="ws://192.168.4.1:81" />
+  <button class="eng-btn" id="connectBtn" onclick="toggleConnect()">Connect</button>
+  <div class="footer-sep"></div>
+  <div style="font-size:10px;color:var(--dim);white-space:nowrap;">CAL:</div>
+  <div class="cal-grid" id="calGrid"></div>
+  <div class="footer-sep"></div>
+  <video id="cvVideo" style="display:none" playsinline></video>
+</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// 1. CONSTANTS & FINGER REGISTRY
+// ══════════════════════════════════════════════════════════
+
+const FINGERS = [
+  { key: 'thumb',  label: 'Thumb',  color: '#6c8ef5', cvColor: '#6c8ef577' },
+  { key: 'index',  label: 'Index',  color: '#5ec4a0', cvColor: '#5ec4a077' },
+  { key: 'middle', label: 'Middle', color: '#f0a050', cvColor: '#f0a05077' },
+  { key: 'ring',   label: 'Ring',   color: '#d97ab8', cvColor: '#d97ab877' },
+  { key: 'pinky',  label: 'Pinky',  color: '#7ecff0', cvColor: '#7ecff077' },
+];
+
+const SEG_THRESHOLDS = { 1: 60, 2: 30, 3: 5 };
+const HISTORY_WINDOW_MS = 10000;
+
+// MediaPipe landmark indices
+const MP_TIP = [4, 8, 12, 16, 20];
+const MP_MCP = [1, 5,  9, 13, 17];
+
+// ══════════════════════════════════════════════════════════
+// 2. STATE VARIABLES
+// ══════════════════════════════════════════════════════════
+
+// Hardware values
+let hwValues = { thumb:0, index:0, middle:0, ring:0, pinky:0 };
+
+// CV values
+let cvValues = { thumb:0, index:0, middle:0, ring:0, pinky:0 };
+
+// Rolling history
+let dataHistory = [];
+
+// Signal reliability
+let prevArrivalTime = 0;
+let latencyMs = 0;
+let prevFirmwareTs = null;
+let droppedPackets = 0;
+let isStale = false;
+let staleTimer = null;
+let msgCount = 0;
+let lastHzCheck = Date.now();
+let displayedHz = 0;
+
+// WebSocket / reconnect
+let ws = null;
+let manualDisconnect = false;
+let reconnectAttempts = 0;
+let reconnectTimer = null;
+
+// CV
+let mpHands = null;
+let mpCamera = null;
+let cvEnabled = false;
+
+// Comparison mode
+let comparisonMode = false;
+
+// Anomaly detection
+const SAMPLE_BUF_SIZE = 100;
+let sampleBuffers = {};
+let sampleCounts = {};
+let sampleHead = 0;
+FINGERS.forEach(f => {
+  sampleBuffers[f.key] = new Float32Array(SAMPLE_BUF_SIZE);
+  sampleCounts[f.key] = 0;
+});
+let anomalies = [];
+
+// Claude API
+let claudeApiKey = localStorage.getItem('claudeApiKey') || '';
+let lastClaudeCall = 0;
+const CLAUDE_INTERVAL_MS = 5000;
+
+// Calibration
+let calMin = [0, 0, 0, 0, 0];
+let calMax = [4095, 4095, 4095, 4095, 4095];
+let autoCalPhase = null;
+let autoCalTimer = null;
+
+// Chart
+let chartInstance = null;
+
+// ══════════════════════════════════════════════════════════
+// 3. DOM REFERENCES (cached after DOMContentLoaded)
+// ══════════════════════════════════════════════════════════
+
+let dom = {};
+
+// ══════════════════════════════════════════════════════════
+// 4. WEBSOCKET MODULE
+// ══════════════════════════════════════════════════════════
+
+function toggleConnect() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    manualDisconnect = true;
+    ws.close();
+    return;
+  }
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  connect(document.getElementById('wsUrl').value.trim());
+}
+
+function connect(url) {
+  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+  setStatus('connecting');
+  try {
+    ws = new WebSocket(url);
+  } catch(e) {
+    setStatus('disconnected');
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    setStatus('connected');
+    manualDisconnect = false;
+    reconnectAttempts = 0;
+    dom.connectBtn.textContent = 'Disconnect';
+    dom.connectBtn.classList.add('danger');
+    appendLog('system', 'WebSocket connected to ' + url);
+  };
+
+  ws.onclose = () => {
+    setStatus('disconnected');
+    dom.connectBtn.textContent = 'Connect';
+    dom.connectBtn.classList.remove('danger');
+    markStale();
+    if (!manualDisconnect) scheduleReconnect();
+  };
+
+  ws.onerror = () => setStatus('disconnected');
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      onMessage(data);
+    } catch(err) {}
+  };
+}
+
+function scheduleReconnect() {
+  const delay = Math.min(500 * Math.pow(2, reconnectAttempts), 30000);
+  reconnectAttempts++;
+  reconnectTimer = setTimeout(() => {
+    const url = document.getElementById('wsUrl').value.trim();
+    connect(url);
+  }, delay);
+}
+
+function setStatus(state) {
+  dom.statusDot.className = 'status-dot ' + state;
+  const el = document.getElementById('hmWs');
+  if (state === 'connected')    { el.textContent = 'ONLINE';  el.className = 'hm-val ok'; }
+  else if (state === 'connecting') { el.textContent = 'CONNECTING'; el.className = 'hm-val warn'; }
+  else                          { el.textContent = 'OFFLINE'; el.className = 'hm-val err'; }
+}
+
+// ══════════════════════════════════════════════════════════
+// 5. DATA PIPELINE
+// ══════════════════════════════════════════════════════════
+
+function onMessage(data) {
+  const now = Date.now();
+
+  // Latency from inter-packet arrival delta
+  if (prevArrivalTime > 0) latencyMs = now - prevArrivalTime;
+  prevArrivalTime = now;
+
+  // Packet drop detection via firmware timestamp diff
+  if (prevFirmwareTs !== null && data.ts !== undefined) {
+    const tsDiff = data.ts - prevFirmwareTs;
+    if (tsDiff > 60) droppedPackets++;
+  }
+  if (data.ts !== undefined) prevFirmwareTs = data.ts;
+
+  // Update hardware values
+  FINGERS.forEach(f => {
+    if (data[f.key] !== undefined) hwValues[f.key] = data[f.key];
+  });
+
+  // Push to rolling history
+  const entry = { t: now, ...hwValues };
+  FINGERS.forEach(f => entry['cv_' + f.key] = cvValues[f.key]);
+  dataHistory.push(entry);
+  const cutoff = now - HISTORY_WINDOW_MS;
+  while (dataHistory.length > 0 && dataHistory[0].t < cutoff) dataHistory.shift();
+
+  // Update sample buffers for anomaly detection
+  FINGERS.forEach(f => {
+    sampleBuffers[f.key][sampleHead % SAMPLE_BUF_SIZE] = hwValues[f.key];
+    sampleCounts[f.key] = Math.min(sampleCounts[f.key] + 1, SAMPLE_BUF_SIZE);
+  });
+  sampleHead = (sampleHead + 1) % SAMPLE_BUF_SIZE;
+
+  // Update Hz counter
+  msgCount++;
+  if (now - lastHzCheck >= 1000) {
+    displayedHz = msgCount;
+    msgCount = 0;
+    lastHzCheck = now;
+  }
+
+  // Reset stale timer
+  isStale = false;
+  if (staleTimer) clearTimeout(staleTimer);
+  staleTimer = setTimeout(markStale, 500);
+
+  // Detect anomalies
+  detectAnomalies();
+
+  // Render
+  renderAll();
+
+  // Auto-trigger Claude on anomalies
+  if (anomalies.length > 0 && claudeApiKey && (now - lastClaudeCall > CLAUDE_INTERVAL_MS)) {
+    triggerClaudeAnalysis();
+  }
+}
+
+function markStale() {
+  isStale = true;
+  document.getElementById('hmLat').textContent = 'STALE';
+  document.getElementById('hmLat').className = 'hm-val err';
+}
+
+// ══════════════════════════════════════════════════════════
+// 6. RENDER MODULE
+// ══════════════════════════════════════════════════════════
+
+function renderAll() {
+  renderBars();
+  renderSvgHand();
+  renderStats();
+  updateChart();
+}
+
+function renderBars() {
+  FINGERS.forEach((f, i) => {
+    const v = hwValues[f.key];
+    const cv = cvValues[f.key];
+    const bar = document.getElementById('bar-hw-' + f.key);
+    const barCv = document.getElementById('bar-cv-' + f.key);
+    const pct = document.getElementById('pct-' + f.key);
+    const delta = document.getElementById('delta-' + f.key);
+    if (bar) bar.style.width = v + '%';
+    if (barCv) barCv.style.width = cv + '%';
+    if (pct) pct.textContent = v.toFixed(1) + '%';
+    if (delta && comparisonMode) {
+      const d = Math.abs(v - cv);
+      delta.textContent = 'Δ' + d.toFixed(0);
+      delta.style.color = d > 15 ? 'var(--danger)' : d > 8 ? 'var(--warn)' : 'var(--success)';
+    }
+  });
+
+  if (comparisonMode) {
+    const deltas = FINGERS.map(f => Math.abs(hwValues[f.key] - cvValues[f.key]));
+    const accuracy = Math.max(0, 100 - deltas.reduce((a,b) => a+b,0) / deltas.length);
+    const badge = document.getElementById('accuracyBadge');
+    badge.textContent = 'ACC ' + accuracy.toFixed(0) + '%';
+    badge.style.background = accuracy > 85 ? '#0f2d1a' : accuracy > 70 ? '#2d1f00' : '#2d0f0f';
+    badge.style.color = accuracy > 85 ? 'var(--success)' : accuracy > 70 ? 'var(--warn)' : 'var(--danger)';
+    badge.style.border = '1px solid ' + (accuracy > 85 ? 'var(--success)' : accuracy > 70 ? 'var(--warn)' : 'var(--danger)');
+    badge.style.display = 'inline-block';
+    badge.style.fontSize = '11px';
+    badge.style.padding = '2px 8px';
+    badge.style.borderRadius = '4px';
+  }
+}
+
+function renderSvgHand() {
+  FINGERS.forEach(f => {
+    const v = hwValues[f.key];
+    [1, 2, 3].forEach(seg => {
+      const el = document.getElementById('seg-' + f.key + '-' + seg);
+      if (!el) return;
+      if (v >= SEG_THRESHOLDS[seg]) {
+        el.style.fill = f.color;
+        el.style.opacity = '0.85';
+      } else {
+        el.style.fill = '#21262d';
+        el.style.opacity = '0.4';
+      }
+    });
+  });
+}
+
+function renderStats() {
+  document.getElementById('statHz').textContent = displayedHz;
+  const avg = FINGERS.reduce((s, f) => s + hwValues[f.key], 0) / 5;
+  document.getElementById('statAvg').textContent = avg.toFixed(0) + '%';
+  const peak = FINGERS.reduce((best, f) => hwValues[f.key] > hwValues[best.key] ? f : best, FINGERS[0]);
+  document.getElementById('statPeak').textContent = peak.label.substring(0, 3);
+  document.getElementById('statDropped').textContent = droppedPackets;
+
+  // Header metrics
+  document.getElementById('hmHz').textContent = displayedHz;
+  const latEl = document.getElementById('hmLat');
+  if (!isStale) {
+    latEl.textContent = latencyMs + 'ms';
+    latEl.className = 'hm-val ' + (latencyMs < 50 ? 'ok' : latencyMs < 100 ? 'warn' : 'err');
+  }
+  document.getElementById('hmPkts').textContent = droppedPackets + ' drop' + (droppedPackets !== 1 ? 's' : '');
+}
+
+// ══════════════════════════════════════════════════════════
+// 7. CHART MODULE
+// ══════════════════════════════════════════════════════════
+
+function initChart() {
+  const canvas = document.getElementById('fingerChart');
+  const ctx = canvas.getContext('2d');
+
+  const hwDatasets = FINGERS.map((f, i) => ({
+    label: f.label + ' HW',
+    data: [],
+    borderColor: f.color,
+    borderWidth: 1.5,
+    pointRadius: 0,
+    tension: 0.2,
+    parsing: false,
+  }));
+
+  const cvDatasets = FINGERS.map((f, i) => ({
+    label: f.label + ' CV',
+    data: [],
+    borderColor: f.cvColor,
+    borderWidth: 1,
+    borderDash: [4, 4],
+    pointRadius: 0,
+    tension: 0.2,
+    parsing: false,
+    hidden: true,
+  }));
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { datasets: [...hwDatasets, ...cvDatasets] },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false },
+      scales: {
+        x: {
+          type: 'linear',
+          min: -HISTORY_WINDOW_MS,
+          max: 0,
+          ticks: { display: false },
+          grid: { color: '#21262d', lineWidth: 0.5 },
+          border: { color: '#21262d' },
+        },
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { color: '#8b949e', font: { family: 'monospace', size: 10 }, stepSize: 25 },
+          grid: { color: '#21262d', lineWidth: 0.5 },
+          border: { color: '#21262d' },
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          backgroundColor: '#161b22',
+          borderColor: '#21262d',
+          borderWidth: 1,
+          titleColor: '#8b949e',
+          bodyColor: '#c9d1d9',
+          titleFont: { family: 'monospace', size: 10 },
+          bodyFont: { family: 'monospace', size: 11 },
+        }
+      }
+    }
+  });
+
+  buildChartLegend();
+}
+
+function buildChartLegend() {
+  const container = document.getElementById('chartLegend');
+  FINGERS.forEach((f, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `<span class="legend-dot" style="background:${f.color}"></span>${f.label}`;
+    item.onclick = () => {
+      const meta = chartInstance.getDatasetMeta(i);
+      meta.hidden = !meta.hidden;
+      chartInstance.update('none');
+      item.style.opacity = meta.hidden ? '0.4' : '1';
+    };
+    container.appendChild(item);
+  });
+}
+
+function updateChart() {
+  if (!chartInstance) return;
+  const now = Date.now();
+  FINGERS.forEach((f, i) => {
+    chartInstance.data.datasets[i].data = dataHistory.map(d => ({ x: d.t - now, y: d[f.key] }));
+    chartInstance.data.datasets[i + 5].data = dataHistory.map(d => ({ x: d.t - now, y: d['cv_' + f.key] ?? null }));
+  });
+  chartInstance.update('none');
+}
+
+// ══════════════════════════════════════════════════════════
+// 8. MEDIAPIPE MODULE
+// ══════════════════════════════════════════════════════════
+
+function dist3d(a, b) {
+  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
+}
+
+function computeCurlFromLandmarks(landmarks) {
+  const wrist = landmarks[0];
+  const result = {};
+  FINGERS.forEach((f, i) => {
+    const tip = landmarks[MP_TIP[i]];
+    const mcp = landmarks[MP_MCP[i]];
+    const tipDist = dist3d(tip, wrist);
+    const mcpDist = dist3d(mcp, wrist);
+    result[f.key] = mcpDist < 0.001 ? 0 : Math.max(0, Math.min(100, (1 - tipDist / mcpDist) * 100));
+  });
+  return result;
+}
+
+function initMediaPipe() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('cvWarn').style.display = 'block';
+    return false;
+  }
+
+  const videoEl = document.getElementById('cvVideo');
+  const previewCanvas = document.getElementById('cvPreview');
+  const previewCtx = previewCanvas.getContext('2d');
+
+  mpHands = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+  });
+
+  mpHands.setOptions({
+    maxNumHands: 1,
+    modelComplexity: 0,
+    minDetectionConfidence: 0.7,
+    minTrackingConfidence: 0.5,
+  });
+
+  mpHands.onResults((results) => {
+    // Draw preview
+    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    if (videoEl.readyState >= 2) {
+      previewCtx.drawImage(videoEl, 0, 0, previewCanvas.width, previewCanvas.height);
+    }
+
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+      cvValues = computeCurlFromLandmarks(results.multiHandLandmarks[0]);
+      document.getElementById('hmCv').textContent = 'LIVE';
+      document.getElementById('hmCv').className = 'hm-val ok';
+    } else {
+      document.getElementById('hmCv').textContent = 'NO HAND';
+      document.getElementById('hmCv').className = 'hm-val warn';
+    }
+
+    // Inject CV into last history entry
+    if (dataHistory.length > 0) {
+      const last = dataHistory[dataHistory.length - 1];
+      FINGERS.forEach(f => last['cv_' + f.key] = cvValues[f.key]);
+    }
+
+    if (comparisonMode) renderBars();
+  });
+
+  mpCamera = new Camera(videoEl, {
+    onFrame: async () => {
+      if (mpHands) await mpHands.send({ image: videoEl });
+    },
+    width: 320,
+    height: 240,
+  });
+
+  return true;
+}
+
+function toggleCV() {
+  if (!cvEnabled) {
+    if (!mpHands) {
+      if (!initMediaPipe()) return;
+    }
+    mpCamera.start();
+    cvEnabled = true;
+    document.getElementById('cvBtn').textContent = 'Disable CV';
+    document.getElementById('cvBtn').classList.add('active');
+    document.getElementById('cvContainer').classList.add('visible');
+    document.getElementById('hmCv').textContent = 'INIT';
+    document.getElementById('hmCv').className = 'hm-val warn';
+  } else {
+    mpCamera.stop();
+    cvEnabled = false;
+    document.getElementById('cvBtn').textContent = 'Enable CV';
+    document.getElementById('cvBtn').classList.remove('active');
+    document.getElementById('cvContainer').classList.remove('visible');
+    document.getElementById('hmCv').textContent = 'OFF';
+    document.getElementById('hmCv').className = 'hm-val';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 9. COMPARISON MODE
+// ══════════════════════════════════════════════════════════
+
+function toggleComparison() {
+  comparisonMode = !comparisonMode;
+  const btn = document.getElementById('cmpBtn');
+  btn.classList.toggle('active', comparisonMode);
+
+  // Show/hide CV bar fills
+  document.querySelectorAll('.bar-fill-cv').forEach(el => {
+    el.style.display = comparisonMode ? 'block' : 'none';
+  });
+  document.querySelectorAll('.delta-label').forEach(el => {
+    el.style.display = comparisonMode ? 'block' : 'none';
+  });
+
+  // Show/hide CV chart datasets
+  if (chartInstance) {
+    for (let i = 5; i < 10; i++) {
+      chartInstance.data.datasets[i].hidden = !comparisonMode;
+    }
+    chartInstance.update('none');
+  }
+
+  if (!comparisonMode) {
+    document.getElementById('accuracyBadge').style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 10. ANOMALY DETECTION MODULE
+// ══════════════════════════════════════════════════════════
+
+function getLast(buf, head, n, count) {
+  const available = Math.min(n, count);
+  const result = [];
+  for (let i = available - 1; i >= 0; i--) {
+    result.push(buf[(head - 1 - i + SAMPLE_BUF_SIZE) % SAMPLE_BUF_SIZE]);
+  }
+  return result;
+}
+
+function linearSlope(arr) {
+  const n = arr.length;
+  if (n < 2) return 0;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += i; sumY += arr[i]; sumXY += i * arr[i]; sumX2 += i * i;
+  }
+  const denom = n * sumX2 - sumX * sumX;
+  return denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
+}
+
+function detectAnomalies() {
+  const found = [];
+  FINGERS.forEach(f => {
+    const count = sampleCounts[f.key];
+    const head = sampleHead;
+
+    if (count >= 20) {
+      const slice20 = getLast(sampleBuffers[f.key], head, 20, count);
+      const mean20 = slice20.reduce((a,b) => a+b, 0) / slice20.length;
+      const variance = slice20.reduce((a,b) => a + (b - mean20) ** 2, 0) / slice20.length;
+      const stddev = Math.sqrt(variance);
+      if (stddev > 5) found.push({ finger: f.key, type: 'jitter', detail: 'σ=' + stddev.toFixed(1) });
+    }
+
+    if (count >= 50) {
+      const slice50 = getLast(sampleBuffers[f.key], head, 50, count);
+      const mean50 = slice50.reduce((a,b) => a+b, 0) / slice50.length;
+      if (mean50 < 8) found.push({ finger: f.key, type: 'baseline_low', detail: 'mean=' + mean50.toFixed(1) + '%' });
+      if (mean50 > 92) found.push({ finger: f.key, type: 'baseline_high', detail: 'mean=' + mean50.toFixed(1) + '%' });
+    }
+
+    if (count >= 80) {
+      const slice80 = getLast(sampleBuffers[f.key], head, 80, count);
+      const slope = linearSlope(slice80);
+      if (Math.abs(slope) > 0.15) found.push({ finger: f.key, type: 'drift', detail: 'slope=' + slope.toFixed(3) });
+    }
+  });
+
+  anomalies = found;
+
+  // Update anomaly bar
+  const bar = document.getElementById('anomalyBar');
+  if (found.length === 0) {
+    bar.innerHTML = '<span class="anomaly-tag ok">ALL NOMINAL</span>';
+  } else {
+    bar.innerHTML = found.slice(0, 6).map(a => {
+      const cls = a.type === 'jitter' ? 'jitter' : '';
+      return `<span class="anomaly-tag ${cls}">${a.finger.substring(0,3).toUpperCase()} ${a.type} ${a.detail}</span>`;
+    }).join('');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 11. CLAUDE API MODULE
+// ══════════════════════════════════════════════════════════
+
+function saveApiKey() {
+  claudeApiKey = document.getElementById('claudeKeyInput').value.trim();
+  localStorage.setItem('claudeApiKey', claudeApiKey);
+  appendLog('system', 'API key saved.');
+}
+
+async function triggerClaudeAnalysis() {
+  if (!claudeApiKey) {
+    appendLog('system', 'No API key — enter your Anthropic key and click Save.');
+    return;
+  }
+  const now = Date.now();
+  if (now - lastClaudeCall < CLAUDE_INTERVAL_MS) return;
+  lastClaudeCall = now;
+
+  const fingerStats = FINGERS.map(f => {
+    const count = sampleCounts[f.key];
+    if (count < 5) return `${f.label}: insufficient data`;
+    const slice = getLast(sampleBuffers[f.key], sampleHead, Math.min(50, count), count);
+    const mean = slice.reduce((a,b)=>a+b,0)/slice.length;
+    const variance = slice.reduce((a,b)=>a+(b-mean)**2,0)/slice.length;
+    const stddev = Math.sqrt(variance);
+    const cvVal = cvValues[f.key];
+    const cvStr = cvEnabled ? ` | CV=${cvVal.toFixed(1)}% Δ=${Math.abs(hwValues[f.key]-cvVal).toFixed(1)}` : '';
+    return `${f.label}: HW=${hwValues[f.key].toFixed(1)}% mean=${mean.toFixed(1)}% σ=${stddev.toFixed(1)}${cvStr}`;
+  }).join('\n');
+
+  const anomalyDesc = anomalies.length === 0
+    ? 'None'
+    : anomalies.map(a => `${a.finger} ${a.type}: ${a.detail}`).join(', ');
+
+  const prompt = `You are an expert in ESP32 flex-sensor glove calibration and gesture recognition.
+
+Live finger extension data (0%=curled, 100%=extended):
+${fingerStats}
+
+Detected sensor issues: ${anomalyDesc}
+Update rate: ${displayedHz} Hz | Latency: ${latencyMs}ms | Dropped packets: ${droppedPackets}
+CV comparison: ${cvEnabled && comparisonMode ? 'active' : 'inactive'}
+
+In 2-4 concise sentences: diagnose anomalies, suggest calibration steps if needed, and identify the current hand gesture if recognizable.`;
+
+  appendLog('system', 'Requesting analysis...');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': claudeApiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-ipc': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 256,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      appendLog('error', 'API error: ' + (err.error?.message || response.status));
+      return;
+    }
+    const result = await response.json();
+    appendLog('assistant', result.content[0].text);
+  } catch(err) {
+    appendLog('error', 'Network error: ' + err.message);
+  }
+}
+
+function appendLog(role, text) {
+  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+  const logEl = document.getElementById('analysisLog');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry log-' + role;
+  const tsEl = document.createElement('span');
+  tsEl.className = 'log-ts';
+  tsEl.textContent = ts;
+  const textEl = document.createElement('span');
+  textEl.className = 'log-text';
+  textEl.textContent = text;
+  entry.appendChild(tsEl);
+  entry.appendChild(textEl);
+  logEl.appendChild(entry);
+  logEl.scrollTop = logEl.scrollHeight;
+  // Keep log from growing unbounded
+  while (logEl.children.length > 80) logEl.removeChild(logEl.firstChild);
+}
+
+// ══════════════════════════════════════════════════════════
+// 12. CALIBRATION MODULE
+// ══════════════════════════════════════════════════════════
+
+function sendCal(fingerIndex, type) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    appendLog('error', 'Not connected to ESP32');
+    return;
+  }
+  ws.send(JSON.stringify({ cmd: 'calibrate', finger: fingerIndex, type: type }));
+  // Track locally for display (approximate — firmware uses raw ADC)
+  if (type === 'min') calMin[fingerIndex] = Math.round(hwValues[FINGERS[fingerIndex].key]);
+  else calMax[fingerIndex] = Math.round(hwValues[FINGERS[fingerIndex].key]);
+  updateCalDisplay(fingerIndex);
+}
+
+function updateCalDisplay(i) {
+  const el = document.getElementById('calRange-' + i);
+  if (el) el.textContent = calMin[i] + '/' + calMax[i];
+}
+
+function startAutoCalibration() {
+  if (autoCalPhase !== null) return;
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    appendLog('error', 'Not connected — cannot calibrate');
+    return;
+  }
+  autoCalPhase = 'fist';
+  const btn = document.getElementById('autoCalBtn');
+  btn.textContent = 'Fist... 3s';
+  btn.classList.add('warn');
+  appendLog('system', 'AUTO-CAL: Make a fist and hold for 3 seconds...');
+
+  autoCalTimer = setTimeout(() => {
+    FINGERS.forEach((f, i) => sendCal(i, 'min'));
+    appendLog('system', 'MIN captured. Open hand fully and hold for 3 seconds...');
+    btn.textContent = 'Open... 3s';
+    autoCalPhase = 'open';
+
+    autoCalTimer = setTimeout(() => {
+      FINGERS.forEach((f, i) => sendCal(i, 'max'));
+      appendLog('system', 'AUTO-CAL complete. All 5 fingers calibrated.');
+      autoCalPhase = null;
+      btn.textContent = 'Auto-Cal';
+      btn.classList.remove('warn');
+    }, 3000);
+  }, 3000);
+}
+
+// ══════════════════════════════════════════════════════════
+// 13. BUILD DYNAMIC UI
+// ══════════════════════════════════════════════════════════
+
+function buildBarsUI() {
+  const container = document.getElementById('barsContainer');
+  FINGERS.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'finger-row';
+    row.innerHTML = `
+      <span class="finger-label">${f.label}</span>
+      <div class="bar-track">
+        <div class="bar-fill" id="bar-hw-${f.key}" style="background:${f.color}"></div>
+        <div class="bar-fill-cv" id="bar-cv-${f.key}" style="background:${f.cvColor}"></div>
+      </div>
+      <span class="pct-label" id="pct-${f.key}">0%</span>
+      <span class="delta-label" id="delta-${f.key}"></span>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function buildCalUI() {
+  const grid = document.getElementById('calGrid');
+  FINGERS.forEach((f, i) => {
+    const col = document.createElement('div');
+    col.className = 'cal-finger';
+    col.innerHTML = `
+      <span class="cal-finger-label">${f.label.substring(0,3).toUpperCase()}</span>
+      <div class="cal-finger-btns">
+        <button class="eng-btn sm min-btn" onclick="sendCal(${i},'min')">MIN</button>
+        <button class="eng-btn sm max-btn" onclick="sendCal(${i},'max')">MAX</button>
+      </div>
+      <span class="cal-range" id="calRange-${i}">—/—</span>
+    `;
+    grid.appendChild(col);
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// 14. INITIALIZATION
+// ══════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Cache DOM refs
+  dom.statusDot  = document.getElementById('statusDot');
+  dom.connectBtn = document.getElementById('connectBtn');
+  dom.wsUrl      = document.getElementById('wsUrl');
+
+  // Restore API key
+  if (claudeApiKey) document.getElementById('claudeKeyInput').value = claudeApiKey;
+
+  // Build dynamic UI
+  buildBarsUI();
+  buildCalUI();
+  initChart();
+
+  appendLog('system', 'GloveOS ready. Connect to ESP32 WebSocket to begin.');
+});
+</script>
+</body>
+</html>
