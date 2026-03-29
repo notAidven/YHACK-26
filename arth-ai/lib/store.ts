@@ -48,6 +48,7 @@ interface WsSlice {
 interface CoachSlice {
   log: CoachEntry[];
   apiKey: string;
+  inputMode: 'hardware' | 'cv' | null;
 }
 
 interface Actions {
@@ -73,6 +74,7 @@ interface Actions {
   appendLog: (role: CoachEntry['role'], text: string) => void;
   setApiKey: (k: string) => void;
   setLastCoachCall: (t: number) => void;
+  setInputMode: (m: 'hardware' | 'cv') => void;
   // cal
   setCalMin: (i: number, v: number) => void;
   setCalMax: (i: number, v: number) => void;
@@ -139,8 +141,9 @@ export const useStore = create<Store>()((set, get) => ({
   connState: 'disconnected',
 
   // ── Coach defaults ──
-  log:    [],
-  apiKey: '',
+  log:       [],
+  apiKey:    '',
+  inputMode: null,
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -279,6 +282,7 @@ export const useStore = create<Store>()((set, get) => ({
   },
   setApiKey:        (k) => set({ apiKey: k }),
   setLastCoachCall: (t) => set({ lastCoachCall: t }),
+  setInputMode:     (m) => set({ inputMode: m }),
 
   setCalMin: (i, v) => set((s) => {
     const next = [...s.calMin]; next[i] = v; return { calMin: next };

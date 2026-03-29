@@ -1,12 +1,15 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import clsx from 'clsx';
 import { useWebSocket } from '@/lib/useWebSocket';
 import { useStore } from '@/lib/store';
 import { WsContext } from '@/lib/WsContext';
 import { FINGERS } from '@/lib/constants';
+
+const CvTracker = dynamic(() => import('./CvTracker'), { ssr: false });
 
 const NAV_ITEMS = [
   {
@@ -171,11 +174,20 @@ function ConnectPopover({ wsSend }: { wsSend: (o: object) => void }) {
 
 // ── Main shell ────────────────────────────────────────────────────────────────
 
+// ── Main shell ────────────────────────────────────────────────────────────────
+
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const { wsSend, toggle } = useWebSocket();
-  const path = usePathname();
+  const path      = usePathname();
+  const router    = useRouter();
   const status    = useStore((s) => s.status);
   const connState = useStore((s) => s.connState);
+  const inputMode = useStore((s) => s.inputMode);
+
+  // Enforce gateway selection
+  useEffect(() => {
+    if (inputMode === null) router.replace('/gateway');
+  }, [inputMode, router]);
 
   const sessionLabel =
     status === 'active'   ? 'Active' :
@@ -188,8 +200,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     status === 'resting' ? 'bg-warn' :
     status === 'complete'? 'bg-success' : 'bg-dim';
 
+  if (inputMode === null) return null;
+
   return (
     <WsContext.Provider value={wsSend}>
+      {inputMode === 'cv' && <CvTracker />}
       <div className="flex flex-col h-screen overflow-hidden bg-bg">
 
         {/* ── Top bar ── */}

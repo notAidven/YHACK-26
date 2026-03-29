@@ -41,7 +41,7 @@ export default function HomePage() {
                 ))}
               </ul>
               <Link
-                href="/dashboard"
+                href="/gateway"
                 className="inline-flex items-center gap-2 bg-accent text-black font-semibold px-5 py-2.5 rounded-lg hover:bg-accent/85 transition-colors text-sm"
               >
                 Try the dashboard
@@ -109,7 +109,7 @@ export default function HomePage() {
               Open the live dashboard, connect your glove, and begin your first session in under a minute.
             </p>
             <Link
-              href="/dashboard"
+              href="/gateway"
               className="inline-flex items-center gap-2 bg-accent text-black font-bold px-7 py-3 rounded-lg hover:bg-accent/85 transition-colors"
             >
               Open Dashboard

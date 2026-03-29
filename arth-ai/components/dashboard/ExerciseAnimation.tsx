@@ -145,7 +145,7 @@ export default function ExerciseAnimation({ exerciseId }: { exerciseId: string }
     return () => clearInterval(id);
   }, [frames.length]);
 
-  const frame = frames[frameIdx];
+  const frame = frames[frameIdx % frames.length];
 
   return (
     <div className="bg-panel2 border border-border rounded-xl p-3 mb-3 shrink-0">
