@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GloveOS · Engineering Interface</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<title>HandFlow · Hand Therapy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
@@ -12,22 +12,32 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:       #0d1117;
-  --panel:    #161b22;
-  --border:   #21262d;
-  --accent:   #58a6ff;
-  --success:  #3fb950;
-  --danger:   #f85149;
-  --warn:     #d29922;
-  --text:     #c9d1d9;
-  --dim:      #8b949e;
-  --mono:     'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --bg:         #0d1117;
+  --panel:      #13181f;
+  --panel2:     #0f1319;
+  --border:     #1e2530;
+  --accent:     #00c9a7;
+  --accent-dim: #00c9a718;
+  --servo:      #a78bfa;
+  --servo-dim:  #a78bfa18;
+  --success:    #34d399;
+  --danger:     #f87171;
+  --warn:       #fbbf24;
+  --text:       #e2e8f0;
+  --dim:        #94a3b8;
+  --mono:  'JetBrains Mono', Consolas, monospace;
+  --sans:  'Inter', 'Segoe UI', system-ui, sans-serif;
+
+  --phase-extend: #00c9a7;
+  --phase-hold:   #fbbf24;
+  --phase-flex:   #a78bfa;
+  --phase-rest:   #64748b;
 }
 
 html, body { height: 100%; overflow: hidden; }
 
 body {
-  font-family: var(--mono);
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
   display: flex;
@@ -35,327 +45,586 @@ body {
   height: 100vh;
 }
 
-/* ── Header ── */
-.eng-header {
-  height: 48px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 16px;
-  gap: 24px;
-  flex-shrink: 0;
-  z-index: 10;
-}
-
-.eng-header .logo {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 1px;
-  white-space: nowrap;
-}
-
-.header-metrics {
-  display: flex;
-  gap: 20px;
-  flex: 1;
-  overflow: hidden;
-}
-
-.hm {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.hm-lbl { color: var(--dim); }
-.hm-val { color: var(--text); font-weight: 500; }
-.hm-val.ok   { color: var(--success); }
-.hm-val.warn { color: var(--warn); }
-.hm-val.err  { color: var(--danger); }
-
-.header-btns {
-  display: flex;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-/* ── Layout ── */
-.eng-layout {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  flex: 1;
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-}
-
-.eng-main {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-}
-
-/* ── Panels ── */
-.panel {
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 16px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.panel-label {
+/* ── Shared ── */
+.label {
   font-size: 10px;
   font-weight: 700;
   color: var(--dim);
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  font-family: var(--mono);
+}
+
+.divider { width: 100%; height: 1px; background: var(--border); margin: 10px 0; flex-shrink: 0; }
+
+/* ── Header ── */
+.hf-header {
+  height: 48px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.hf-logo {
+  font-family: var(--sans);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+}
+
+.session-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--mono);
+}
+
+.session-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--dim);
+  transition: background 0.3s;
+}
+.session-dot.active { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.session-dot.resting { background: var(--warn); }
+.session-dot.complete { background: var(--success); }
+
+.session-timer {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--dim);
+  letter-spacing: 1px;
+  display: none;
+  min-width: 48px;
+}
+.session-timer.visible { display: block; color: var(--text); }
+
+.header-spacer { flex: 1; }
+
+.ws-expand-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--dim);
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--mono);
+  transition: border-color 0.15s, color 0.15s;
+}
+.ws-expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.ws-row {
+  display: none;
+  position: absolute;
+  top: 48px;
+  right: 0;
+  left: 0;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 18px;
+  gap: 10px;
+  align-items: center;
+  z-index: 100;
+}
+.ws-row.open { display: flex; }
+
+/* ── Body Layout ── */
+.hf-body {
+  display: grid;
+  grid-template-columns: 38fr 30fr 32fr;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Panel base ── */
+.hf-panel {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hf-panel:last-child { border-right: none; }
+
+.panel-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── LEFT: Exercise Station ── */
+.ex-selector {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 7px 10px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+.ex-selector:focus { border-color: var(--accent); }
+
+.ex-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.ex-name {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.ex-desc {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.ex-guide {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  line-height: 1.7;
+  white-space: pre;
+}
+
+/* ── Phase Indicator ── */
+.phase-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.phase-step {
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--dim);
+  padding: 3px 8px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  letter-spacing: 0.5px;
+}
+
+.phase-step.active {
+  color: #000;
+  background: var(--accent);
+}
+.phase-step.active.hold   { background: var(--warn); }
+.phase-step.active.flex   { background: var(--servo); }
+.phase-step.active.rest   { background: var(--phase-rest); }
+
+.phase-arrow { color: var(--border); font-size: 12px; }
+
+/* ── Rep Counter ── */
+.rep-display {
+  text-align: center;
+  margin: 10px 0 8px;
+  flex-shrink: 0;
+}
+
+.rep-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.rep-count {
+  font-family: var(--sans);
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.rep-total {
+  font-family: var(--sans);
+  font-size: 22px;
+  color: var(--dim);
+  font-weight: 400;
+}
+
+.set-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0 10px;
+  flex-shrink: 0;
+}
+
+.set-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s;
+}
+.set-dot.done { background: var(--accent); }
+.set-dot.current { background: var(--accent); opacity: 0.5; }
+
+/* ── Rest Timer ── */
+.rest-display {
+  display: none;
+  background: var(--servo-dim);
+  border: 1px solid var(--servo);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.rest-display.visible { display: block; }
+
+.rest-label { font-size: 10px; font-family: var(--mono); color: var(--servo); letter-spacing: 1px; text-transform: uppercase; }
+.rest-timer-val { font-size: 28px; font-weight: 700; font-family: var(--mono); color: var(--servo); }
+
+/* ── Session Controls ── */
+.session-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Rep Chart ── */
+.chart-section {
+  flex: 1;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dim);
+  font-size: 12px;
+  font-family: var(--mono);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  text-align: center;
+  padding: 20px;
+}
+
+.chart-canvas-wrap {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+  display: none;
+}
+.chart-canvas-wrap.visible { display: block; }
+
+/* ── CENTER: Hand Monitor ── */
+.svgwrap {
+  display: flex;
+  justify-content: center;
   margin-bottom: 10px;
   flex-shrink: 0;
 }
 
-/* ── Chart panel ── */
-.chart-panel { position: relative; }
-
-.chart-wrap {
-  flex: 1;
-  position: relative;
-  min-height: 0;
-}
-
-.chart-legend {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
-  flex-shrink: 0;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--dim);
-  cursor: pointer;
-}
-
-.legend-dot {
-  width: 10px; height: 3px;
-  border-radius: 2px;
-}
-
-/* ── Gauge panel ── */
-.gauge-panel {
-  flex-direction: row;
-  gap: 16px;
-  padding: 14px 16px;
-}
-
-.svgwrap { flex-shrink: 0; }
-
-.bars-wrap { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.rom-bars { flex: 1; overflow: hidden; }
 
 .finger-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 7px;
 }
 
 .finger-label {
   font-size: 11px;
+  font-family: var(--mono);
   color: var(--dim);
-  width: 46px;
+  width: 44px;
   flex-shrink: 0;
 }
 
 .bar-track {
   flex: 1;
-  height: 8px;
+  height: 10px;
   background: #0d1117;
-  border-radius: 4px;
-  overflow: hidden;
+  border-radius: 5px;
+  overflow: visible;
   border: 1px solid var(--border);
   position: relative;
 }
 
 .bar-fill {
   height: 100%;
-  border-radius: 4px;
+  border-radius: 5px;
   width: 0%;
-  transition: width 0.05s linear;
+  transition: width 0.06s linear;
+  position: relative;
+  z-index: 2;
 }
 
-.bar-fill-cv {
-  height: 100%;
-  border-radius: 4px;
-  width: 0%;
+.bar-target-zone {
   position: absolute;
-  top: 0; left: 0;
-  opacity: 0.45;
-  transition: width 0.05s linear;
+  top: -1px;
+  height: calc(100% + 2px);
+  background: #34d39933;
+  border: 1px solid #34d39966;
+  border-radius: 5px;
+  z-index: 1;
+  pointer-events: none;
   display: none;
 }
+.bar-target-zone.visible { display: block; }
 
 .pct-label {
   font-size: 11px;
+  font-family: var(--mono);
   color: var(--text);
   width: 38px;
   text-align: right;
-  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
-.delta-label {
-  font-size: 10px;
-  color: var(--warn);
-  width: 36px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+/* ── Per-Finger Assist Toggles (center) ── */
+.finger-assist-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
   flex-shrink: 0;
-  display: none;
+  flex-wrap: wrap;
 }
 
+.finger-assist-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--dim);
+  transition: all 0.15s;
+}
+.finger-assist-btn.on { border-color: var(--servo); color: var(--servo); background: var(--servo-dim); }
+.finger-assist-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.finger-assist-btn.on .dot { background: var(--servo); }
+
+/* Stats row */
 .stats-row {
   display: flex;
-  gap: 8px;
-  margin-top: auto;
-  padding-top: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 
 .stat-card {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 7px;
+  padding: 7px 10px;
   flex: 1;
-  min-width: 80px;
+  text-align: center;
 }
+.stat-val { font-size: 20px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.stat-lbl { font-size: 9px; font-family: var(--mono); color: var(--dim); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px; }
 
-.stat-card .val {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
+/* ── RIGHT: Servo + Coach ── */
+.servo-section { flex-shrink: 0; }
 
-.stat-card .lbl {
-  font-size: 10px;
-  color: var(--dim);
-  margin-top: 1px;
-  letter-spacing: 0.4px;
-}
-
-/* ── Sidebar ── */
-.eng-sidebar {
-  background: var(--panel);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.sidebar-header {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--border);
+.assist-master {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-shrink: 0;
+  margin-bottom: 10px;
 }
 
-.api-key-row {
+.assist-label { font-size: 13px; font-weight: 600; }
+
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-btn {
+  width: 44px; height: 24px;
+  background: var(--border);
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-btn::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: left 0.2s;
+}
+.toggle-btn.on { background: var(--servo); }
+.toggle-btn.on::after { left: 23px; }
+.toggle-btn.accent-on { background: var(--accent); }
+.toggle-btn.accent-on::after { left: 23px; }
+
+.toggle-label { font-size: 11px; font-family: var(--mono); color: var(--dim); }
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.slider-row label { font-size: 11px; color: var(--dim); width: 44px; flex-shrink: 0; font-family: var(--mono); }
+
+input[type=range] {
+  flex: 1;
+  accent-color: var(--servo);
+  height: 4px;
+  cursor: pointer;
+}
+
+.slider-val { font-size: 11px; font-family: var(--mono); color: var(--dim); width: 30px; text-align: right; }
+
+.finger-servo-rows { margin-top: 6px; }
+
+.finger-servo-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.finger-servo-row .flbl { font-size: 11px; font-family: var(--mono); color: var(--dim); width: 44px; flex-shrink: 0; }
+.finger-servo-row .toggle-btn { width: 32px; height: 18px; flex-shrink: 0; }
+.finger-servo-row .toggle-btn::after { width: 12px; height: 12px; top: 3px; }
+.finger-servo-row .toggle-btn.on::after { left: 17px; }
+.finger-servo-row input[type=range] { flex: 1; }
+.finger-servo-row .slider-val { width: 28px; }
+.finger-servo-row.disabled input[type=range] { opacity: 0.3; pointer-events: none; }
+
+/* ── Coach section ── */
+.coach-section { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.coach-controls {
   display: flex;
   gap: 6px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
   flex-shrink: 0;
 }
 
-.api-key-row input {
+.api-input {
   flex: 1;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text);
   font-family: var(--mono);
   font-size: 11px;
   padding: 5px 8px;
   outline: none;
+  min-width: 0;
 }
+.api-input:focus { border-color: var(--accent); }
 
-.api-key-row input:focus { border-color: var(--accent); }
-
-.anomaly-bar {
-  padding: 8px 16px;
-  font-size: 11px;
-  border-bottom: 1px solid var(--border);
-  min-height: 32px;
-  color: var(--dim);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.anomaly-tag {
-  background: #2d1f00;
-  border: 1px solid var(--warn);
-  color: var(--warn);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-}
-
-.anomaly-tag.jitter { border-color: var(--danger); color: var(--danger); background: #2d0f0f; }
-.anomaly-tag.ok { border-color: var(--success); color: var(--success); background: #0f2d1a; }
-
-.analysis-log {
+.coach-log {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
+  min-height: 0;
 }
 
-.log-entry {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.log-ts {
-  font-size: 10px;
-  color: var(--dim);
-}
-
+.log-entry { display: flex; flex-direction: column; gap: 2px; }
+.log-ts { font-size: 10px; font-family: var(--mono); color: var(--dim); }
 .log-text {
   font-size: 11px;
-  color: var(--text);
-  line-height: 1.5;
+  line-height: 1.55;
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 6px 8px;
-  white-space: pre-wrap;
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: var(--text);
   word-break: break-word;
 }
-
-.log-entry.log-assistant .log-text { border-color: #1f3a5c; background: #0d1a2a; }
-.log-entry.log-error .log-text     { border-color: #3a1f1f; color: var(--danger); }
+.log-entry.log-assistant .log-text { border-color: #1a3a50; background: #0a1a28; color: #b3d9f0; }
+.log-entry.log-error .log-text     { border-color: #3a1515; color: var(--danger); }
 .log-entry.log-system .log-text    { color: var(--dim); font-style: italic; }
 
+/* ── Session Summary ── */
+.session-summary {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.sum-item { display: flex; flex-direction: column; }
+.sum-val { font-size: 16px; font-weight: 700; font-family: var(--mono); color: var(--text); }
+.sum-lbl { font-size: 9px; font-family: var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; }
+
 /* ── Footer ── */
-.eng-footer {
-  height: 56px;
+.hf-footer {
+  height: 50px;
   background: var(--panel);
   border-top: 1px solid var(--border);
   display: flex;
@@ -365,21 +634,60 @@ body {
   flex-shrink: 0;
 }
 
-.footer-section {
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--dim);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.connected    { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.status-dot.connecting   { background: var(--warn); }
+.status-dot.disconnected { background: var(--danger); }
+
+.status-text {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.footer-sep { width: 1px; height: 26px; background: var(--border); flex-shrink: 0; }
+
+.cal-collapsible {
+  position: relative;
+}
+
+.cal-toggle-btn {
+  font-size: 11px;
+  font-family: var(--mono);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--dim);
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cal-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.cal-popup {
+  display: none;
+  position: absolute;
+  bottom: 44px;
+  left: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 50;
+  white-space: nowrap;
+}
+.cal-popup.open { display: block; }
+
+.cal-grid-inner {
   display: flex;
-  align-items: center;
   gap: 8px;
-}
-
-.footer-sep {
-  width: 1px;
-  height: 28px;
-  background: var(--border);
-}
-
-.cal-grid {
-  display: flex;
-  gap: 6px;
 }
 
 .cal-finger {
@@ -389,179 +697,170 @@ body {
   gap: 3px;
 }
 
-.cal-finger-label {
-  font-size: 9px;
-  color: var(--dim);
-  letter-spacing: 0.5px;
-}
-
-.cal-finger-btns {
-  display: flex;
-  gap: 3px;
-}
-
-.cal-range {
-  font-size: 9px;
-  color: var(--dim);
-}
+.cal-flabel { font-size: 9px; font-family: var(--mono); color: var(--dim); }
+.cal-btns { display: flex; gap: 3px; }
+.cal-range { font-size: 9px; font-family: var(--mono); color: var(--dim); }
 
 /* ── Buttons ── */
-.eng-btn {
-  background: #1f2d3d;
-  color: var(--text);
+.btn {
+  border-radius: 7px;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 5px 12px;
-  font-family: var(--mono);
-  font-size: 12px;
   cursor: pointer;
+  font-family: var(--sans);
+  font-weight: 600;
+  transition: all 0.15s;
   white-space: nowrap;
-  transition: border-color 0.15s, background 0.15s;
 }
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+  padding: 8px 18px;
+  font-size: 13px;
+}
+.btn-primary:hover { background: #00b396; }
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ghost {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  padding: 5px 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+.btn-danger:hover { background: #3a1515; }
+.btn-min { border-color: #1f3a5c; color: #58a6ff88; font-family: var(--mono); font-size: 10px; padding: 3px 7px; }
+.btn-min:hover { border-color: #58a6ff; color: #58a6ff; }
+.btn-max { border-color: #3a1f5c; color: #a78bfa88; font-family: var(--mono); font-size: 10px; padding: 3px 7px; }
+.btn-max:hover { border-color: var(--servo); color: var(--servo); }
 
-.eng-btn:hover { border-color: var(--accent); background: #1f3a5c; }
-.eng-btn.active { border-color: var(--accent); color: var(--accent); background: #0d1a2a; }
-.eng-btn.danger { border-color: var(--danger); color: var(--danger); background: #2d0f0f; }
-.eng-btn.success { border-color: var(--success); color: var(--success); background: #0f2d1a; }
-.eng-btn.sm { padding: 3px 8px; font-size: 11px; }
-.eng-btn.min-btn { border-color: #1f3a5c; color: #58a6ff88; }
-.eng-btn.min-btn:hover { border-color: var(--accent); color: var(--accent); }
-.eng-btn.max-btn { border-color: #3a1f5c; color: #bc8cff88; }
-.eng-btn.max-btn:hover { border-color: #bc8cff; color: #bc8cff; }
-
-/* ── Connection input ── */
 .ws-input {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text);
   font-family: var(--mono);
   font-size: 12px;
   padding: 5px 10px;
   outline: none;
-  width: 200px;
+  width: 220px;
+  flex-shrink: 0;
 }
-
 .ws-input:focus { border-color: var(--accent); }
 
-/* ── Status dot ── */
-.status-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: #555;
-  flex-shrink: 0;
-  transition: background 0.3s;
-}
-.status-dot.connected    { background: var(--success); box-shadow: 0 0 5px var(--success); }
-.status-dot.connecting   { background: var(--warn); }
-.status-dot.disconnected { background: var(--danger); }
-
-/* ── CV preview overlay ── */
-.cv-container {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  z-index: 5;
-  display: none;
-}
-
-.cv-container.visible { display: block; }
-
-#cvPreview {
-  width: 120px;
-  height: 90px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #000;
-  display: block;
-}
-
-.cv-badge {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  background: var(--success);
-  color: #000;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  letter-spacing: 0.5px;
-}
-
-.cv-warn {
-  font-size: 10px;
-  color: var(--warn);
-  padding: 4px 0;
-  display: none;
-}
-
-/* ── Accuracy badge ── */
-.accuracy-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-weight: 700;
-  display: none;
-}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
-
-/* SVG finger fill colors */
-.svg-f0 { fill: #6c8ef5; }
-.svg-f1 { fill: #5ec4a0; }
-.svg-f2 { fill: #f0a050; }
-.svg-f3 { fill: #d97ab8; }
-.svg-f4 { fill: #7ecff0; }
 </style>
 </head>
 <body>
 
 <!-- ── Header ── -->
-<header class="eng-header">
-  <div class="logo">GLOVEOS</div>
-  <div class="header-metrics">
-    <div class="hm"><span class="hm-lbl">WS</span><span class="hm-val" id="hmWs">OFFLINE</span></div>
-    <div class="hm"><span class="hm-lbl">Hz</span><span class="hm-val" id="hmHz">—</span></div>
-    <div class="hm"><span class="hm-lbl">LAT</span><span class="hm-val" id="hmLat">—</span></div>
-    <div class="hm"><span class="hm-lbl">PKTS</span><span class="hm-val" id="hmPkts">—</span></div>
-    <div class="hm"><span class="hm-lbl">CV</span><span class="hm-val" id="hmCv">OFF</span></div>
-    <span class="accuracy-badge" id="accuracyBadge"></span>
+<header class="hf-header">
+  <div class="hf-logo">HandFlow</div>
+  <div class="session-pill">
+    <div class="session-dot" id="sessionDot"></div>
+    <span id="sessionStatus">Idle</span>
   </div>
-  <div class="header-btns">
-    <button class="eng-btn" id="cvBtn" onclick="toggleCV()">Enable CV</button>
-    <button class="eng-btn" id="cmpBtn" onclick="toggleComparison()">HW vs CV</button>
-    <button class="eng-btn" id="autoCalBtn" onclick="startAutoCalibration()">Auto-Cal</button>
-  </div>
+  <div class="session-timer" id="sessionTimer">00:00</div>
+  <div class="header-spacer"></div>
+  <button class="ws-expand-btn" id="wsExpandBtn" onclick="toggleWsRow()">⚙ Connect</button>
 </header>
 
-<!-- ── Main layout ── -->
-<div class="eng-layout">
-  <main class="eng-main">
+<!-- WS expand row -->
+<div class="ws-row" id="wsRow">
+  <div class="status-dot" id="statusDot"></div>
+  <input class="ws-input" type="text" id="wsUrl" value="ws://192.168.4.1:81" />
+  <button class="btn btn-ghost" id="connectBtn" onclick="toggleConnect()">Connect</button>
+  <span style="font-size:11px;font-family:var(--mono);color:var(--dim);" id="connStatus">Disconnected</span>
+</div>
 
-    <!-- Chart panel -->
-    <section class="panel chart-panel">
-      <div class="panel-label">Signal History · 10s</div>
-      <div class="chart-legend" id="chartLegend"></div>
-      <div class="chart-wrap">
-        <canvas id="fingerChart"></canvas>
-      </div>
-      <div class="cv-container" id="cvContainer">
-        <canvas id="cvPreview" width="160" height="120"></canvas>
-        <div class="cv-badge">CV</div>
-      </div>
-      <div class="cv-warn" id="cvWarn">Camera unavailable — open as file:/// or use HTTPS</div>
-    </section>
+<!-- ── Body ── -->
+<div class="hf-body">
 
-    <!-- Gauge panel -->
-    <section class="panel gauge-panel">
+  <!-- ═══ LEFT: Exercise Station ═══ -->
+  <div class="hf-panel">
+    <div class="panel-header">
+      <div class="label">Exercise Station</div>
+    </div>
+    <div class="panel-body">
+
+      <select class="ex-selector" id="exSelector" onchange="onExerciseChange()"></select>
+
+      <div class="ex-card" id="exCard">
+        <div class="ex-name" id="exName">—</div>
+        <div class="ex-desc" id="exDesc">Select an exercise to begin</div>
+        <pre class="ex-guide" id="exGuide"></pre>
+      </div>
+
+      <!-- Phase indicator -->
+      <div class="phase-bar" id="phaseBar">
+        <div class="phase-step" id="phaseExtend">EXTEND</div>
+        <div class="phase-arrow">›</div>
+        <div class="phase-step hold" id="phaseHold">HOLD</div>
+        <div class="phase-arrow">›</div>
+        <div class="phase-step flex" id="phaseFlex">FLEX</div>
+        <div class="phase-arrow">›</div>
+        <div class="phase-step rest" id="phaseRest">REST</div>
+      </div>
+
+      <!-- Rep counter -->
+      <div class="rep-display">
+        <div class="rep-label">Rep</div>
+        <div class="rep-count">
+          <span id="repCurrent">0</span><span class="rep-total"> / <span id="repTotal">10</span></span>
+        </div>
+      </div>
+
+      <!-- Set dots -->
+      <div class="set-dots" id="setDots"></div>
+
+      <!-- Rest display -->
+      <div class="rest-display" id="restDisplay">
+        <div class="rest-label">Rest — next set in</div>
+        <div class="rest-timer-val" id="restTimerVal">00:30</div>
+      </div>
+
+      <!-- Session controls -->
+      <div class="session-controls">
+        <button class="btn btn-primary" id="startBtn" onclick="startSession()" style="flex:1">▶ Start</button>
+        <button class="btn btn-secondary" id="pauseBtn" onclick="pauseSession()" style="flex:1" disabled>⏸ Pause</button>
+        <button class="btn btn-secondary" onclick="nextExercise()" style="flex:1">→ Next</button>
+      </div>
+
+      <!-- Rep chart -->
+      <div class="chart-section">
+        <div class="label" style="margin-bottom:8px">Session Progress</div>
+        <div class="chart-placeholder" id="chartPlaceholder">Start a session to<br>track rep performance</div>
+        <div class="chart-canvas-wrap" id="chartWrap">
+          <canvas id="repChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ CENTER: Hand Monitor ═══ -->
+  <div class="hf-panel">
+    <div class="panel-header">
+      <div class="label">ROM Monitor</div>
+    </div>
+    <div class="panel-body">
+
       <div class="svgwrap">
-        <svg id="handSvg" width="160" height="260" viewBox="0 0 200 320">
-          <rect x="48" y="180" width="108" height="100" rx="16" fill="#1e2235" stroke="#21262d" stroke-width="1"/>
+        <svg id="handSvg" width="150" height="245" viewBox="0 0 200 320">
+          <rect x="48" y="180" width="108" height="100" rx="16" fill="#1e2535" stroke="#1e2530" stroke-width="1"/>
           <g id="finger-thumb">
             <rect id="seg-thumb-3" x="18" y="218" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
             <rect id="seg-thumb-2" x="14" y="186" width="26" height="36" rx="7" fill="#21262d" opacity="0.4"/>
@@ -595,139 +894,242 @@ body {
         </svg>
       </div>
 
-      <div class="bars-wrap">
-        <div style="font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;">Extension %</div>
-        <div id="barsContainer"></div>
-        <div class="stats-row">
-          <div class="stat-card"><div class="val" id="statHz">—</div><div class="lbl">Hz</div></div>
-          <div class="stat-card"><div class="val" id="statAvg">—</div><div class="lbl">Avg ext</div></div>
-          <div class="stat-card"><div class="val" id="statPeak">—</div><div class="lbl">Peak</div></div>
-          <div class="stat-card"><div class="val" id="statDropped">0</div><div class="lbl">Drops</div></div>
+      <div class="rom-bars" id="barsContainer"></div>
+
+      <div class="label" style="margin-top:12px;margin-bottom:6px">Assist per Finger</div>
+      <div class="finger-assist-row" id="fingerAssistRow"></div>
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="statAvg">—</div><div class="stat-lbl">Avg ROM</div></div>
+        <div class="stat-card"><div class="stat-val" id="statPeak">—</div><div class="stat-lbl">Peak</div></div>
+        <div class="stat-card"><div class="stat-val" id="statReps">0</div><div class="stat-lbl">Total Reps</div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT: Servo + Coach ═══ -->
+  <div class="hf-panel" style="border-right:none">
+    <div class="panel-header">
+      <div class="label">Servo Assist & Coach</div>
+    </div>
+    <div class="panel-body">
+
+      <!-- Servo section -->
+      <div class="servo-section">
+        <div class="assist-master">
+          <div class="assist-label">Assist Mode</div>
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="assistModeLabel">OFF</span>
+            <button class="toggle-btn" id="assistToggle" onclick="onAssistModeToggle()"></button>
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <label>Level</label>
+          <input type="range" id="assistLevel" min="0" max="100" value="70"
+            oninput="onAssistLevelChange(this.value)">
+          <span class="slider-val" id="assistLevelVal">70%</span>
+        </div>
+
+        <div class="label" style="margin-bottom:6px">Per Finger</div>
+        <div class="finger-servo-rows" id="fingerServoRows"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Therapy Coach -->
+      <div class="coach-section">
+        <div class="label" style="margin-bottom:8px">Therapy Coach</div>
+        <div class="coach-controls">
+          <input type="password" class="api-input" id="claudeKeyInput" placeholder="sk-ant-api… (Anthropic key)" />
+          <button class="btn btn-ghost btn-sm" onclick="saveApiKey()">Save</button>
+          <button class="btn btn-ghost btn-sm" onclick="triggerCoach('manual')">Ask</button>
+        </div>
+        <div class="coach-log" id="coachLog"></div>
+
+        <div class="divider"></div>
+        <div class="label" style="margin-bottom:6px">Session Summary</div>
+        <div class="session-summary">
+          <div class="sum-item"><div class="sum-val" id="sumReps">0</div><div class="sum-lbl">Total Reps</div></div>
+          <div class="sum-item"><div class="sum-val" id="sumAvgRom">—</div><div class="sum-lbl">Avg ROM</div></div>
+          <div class="sum-item"><div class="sum-val" id="sumTime">—</div><div class="sum-lbl">Duration</div></div>
+          <div class="sum-item"><div class="sum-val" id="sumSets">0</div><div class="sum-lbl">Sets Done</div></div>
         </div>
       </div>
-    </section>
 
-  </main>
+    </div>
+  </div>
 
-  <!-- Sidebar -->
-  <aside class="eng-sidebar">
-    <div class="sidebar-header">
-      <span class="panel-label" style="margin:0">ANALYSIS</span>
-      <button class="eng-btn sm" onclick="triggerClaudeAnalysis()">Analyze Now</button>
-    </div>
-    <div class="api-key-row">
-      <input type="password" id="claudeKeyInput" placeholder="sk-ant-api… (Claude API key)" />
-      <button class="eng-btn sm" onclick="saveApiKey()">Save</button>
-    </div>
-    <div class="anomaly-bar" id="anomalyBar"><span style="color:var(--dim);font-size:11px;">No anomalies</span></div>
-    <div class="analysis-log" id="analysisLog"></div>
-  </aside>
-</div>
+</div><!-- /hf-body -->
 
 <!-- ── Footer ── -->
-<footer class="eng-footer">
-  <div class="status-dot" id="statusDot"></div>
-  <input class="ws-input" type="text" id="wsUrl" value="ws://192.168.4.1:81" />
-  <button class="eng-btn" id="connectBtn" onclick="toggleConnect()">Connect</button>
+<footer class="hf-footer">
+  <div class="status-dot" id="footerStatusDot"></div>
+  <span class="status-text" id="footerConnText">Disconnected</span>
   <div class="footer-sep"></div>
-  <div style="font-size:10px;color:var(--dim);white-space:nowrap;">CAL:</div>
-  <div class="cal-grid" id="calGrid"></div>
-  <div class="footer-sep"></div>
+  <div class="cal-collapsible">
+    <button class="cal-toggle-btn" onclick="toggleCalPopup()">⚙ Calibration</button>
+    <div class="cal-popup" id="calPopup">
+      <div class="label" style="margin-bottom:8px">Calibrate Sensors</div>
+      <div class="cal-grid-inner" id="calGrid"></div>
+      <div style="margin-top:8px">
+        <button class="btn btn-ghost" onclick="startAutoCalibration()" id="autoCalBtn">Auto-Cal</button>
+      </div>
+    </div>
+  </div>
+  <!-- Hidden debug: CV toggle -->
   <video id="cvVideo" style="display:none" playsinline></video>
 </footer>
 
 <script>
-// ══════════════════════════════════════════════════════════
-// 1. CONSTANTS & FINGER REGISTRY
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 1. CONSTANTS
+// ══════════════════════════════════════════════════════
 
 const FINGERS = [
-  { key: 'thumb',  label: 'Thumb',  color: '#6c8ef5', cvColor: '#6c8ef577' },
-  { key: 'index',  label: 'Index',  color: '#5ec4a0', cvColor: '#5ec4a077' },
-  { key: 'middle', label: 'Middle', color: '#f0a050', cvColor: '#f0a05077' },
-  { key: 'ring',   label: 'Ring',   color: '#d97ab8', cvColor: '#d97ab877' },
-  { key: 'pinky',  label: 'Pinky',  color: '#7ecff0', cvColor: '#7ecff077' },
+  { key: 'thumb',  label: 'Thumb',  color: '#6c8ef5' },
+  { key: 'index',  label: 'Index',  color: '#00c9a7' },
+  { key: 'middle', label: 'Middle', color: '#f0a050' },
+  { key: 'ring',   label: 'Ring',   color: '#d97ab8' },
+  { key: 'pinky',  label: 'Pinky',  color: '#a78bfa' },
 ];
 
 const SEG_THRESHOLDS = { 1: 60, 2: 30, 3: 5 };
-const HISTORY_WINDOW_MS = 10000;
 
-// MediaPipe landmark indices
-const MP_TIP = [4, 8, 12, 16, 20];
-const MP_MCP = [1, 5,  9, 13, 17];
+const EXERCISES = [
+  {
+    id: 'tendon_glide',
+    name: 'Tendon Glide',
+    description: 'Curl fingers from straight → hooked → fist and back. Focus on full range of motion.',
+    guide: '  Straight:  | | | | |\n  Hook:      / / / / /\n  Full Fist: ( ( ( ( (',
+    targetROM: { thumb:80, index:85, middle:85, ring:80, pinky:75 },
+    holdDuration: 1000, repsPerSet: 10, sets: 3,
+  },
+  {
+    id: 'hook_fist',
+    name: 'Hook Fist',
+    description: 'Bend only the top two finger joints. Keep the knuckle joints straight.',
+    guide: '  Straight:  | | | | |\n  Hook:      \\ \\ \\ \\ \\',
+    targetROM: { thumb:40, index:70, middle:70, ring:65, pinky:60 },
+    holdDuration: 1000, repsPerSet: 10, sets: 3,
+  },
+  {
+    id: 'full_fist',
+    name: 'Full Fist',
+    description: 'Close your hand into a complete fist, then open fully. Maximize your range.',
+    guide: '  Open:  | | | | |\n  Fist:   ( ( ( ( (',
+    targetROM: { thumb:90, index:95, middle:95, ring:90, pinky:85 },
+    holdDuration: 1500, repsPerSet: 8, sets: 3,
+  },
+  {
+    id: 'tabletop',
+    name: 'Tabletop',
+    description: 'Bend at the knuckles 90°, keeping the top two joints straight like a table.',
+    guide: '  Open:   | | | | |\n  Table:  [= = = = =]',
+    targetROM: { thumb:20, index:50, middle:50, ring:45, pinky:40 },
+    holdDuration: 2000, repsPerSet: 8, sets: 2,
+  },
+  {
+    id: 'finger_lift',
+    name: 'Finger Lift',
+    description: 'Lift each finger gently from a flat surface, one at a time.',
+    guide: '  Flat: _ | | | |\n  Lift: _ ^ | | |',
+    targetROM: { thumb:30, index:30, middle:30, ring:30, pinky:30 },
+    holdDuration: 1000, repsPerSet: 5, sets: 2,
+  },
+];
 
-// ══════════════════════════════════════════════════════════
-// 2. STATE VARIABLES
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 2. STATE
+// ══════════════════════════════════════════════════════
 
-// Hardware values
 let hwValues = { thumb:0, index:0, middle:0, ring:0, pinky:0 };
 
-// CV values
-let cvValues = { thumb:0, index:0, middle:0, ring:0, pinky:0 };
-
-// Rolling history
-let dataHistory = [];
-
-// Signal reliability
-let prevArrivalTime = 0;
-let latencyMs = 0;
-let prevFirmwareTs = null;
-let droppedPackets = 0;
-let isStale = false;
-let staleTimer = null;
-let msgCount = 0;
-let lastHzCheck = Date.now();
-let displayedHz = 0;
-
-// WebSocket / reconnect
+// WebSocket
 let ws = null;
 let manualDisconnect = false;
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 
-// CV
-let mpHands = null;
-let mpCamera = null;
-let cvEnabled = false;
+// Session
+const sessionState = {
+  status: 'idle',
+  startTime: null,
+  timerInterval: null,
+  currentExIdx: 0,
+  currentSet: 1,
+  currentRep: 0,
+  totalReps: 0,
 
-// Comparison mode
-let comparisonMode = false;
+  phase: 'idle',
+  phaseStartTime: null,
+  assistSentFlex: false,
+  peakROM: {},
+  repHistory: [],
+  chartData: [],
 
-// Anomaly detection
-const SAMPLE_BUF_SIZE = 100;
-let sampleBuffers = {};
-let sampleCounts = {};
-let sampleHead = 0;
-FINGERS.forEach(f => {
-  sampleBuffers[f.key] = new Float32Array(SAMPLE_BUF_SIZE);
-  sampleCounts[f.key] = 0;
-});
-let anomalies = [];
+  restDuration: 30000,
+  restStartTime: null,
+  restInterval: null,
 
-// Claude API
-let claudeApiKey = localStorage.getItem('claudeApiKey') || '';
-let lastClaudeCall = 0;
-const CLAUDE_INTERVAL_MS = 5000;
+  assistMode: false,
+  assistLevel: 70,
+  fingerAssist: {
+    thumb:  { enabled: true,  level: 70 },
+    index:  { enabled: true,  level: 70 },
+    middle: { enabled: false, level: 70 },
+    ring:   { enabled: false, level: 70 },
+    pinky:  { enabled: true,  level: 50 },
+  },
+
+  lastCoachCall: 0,
+  coachCooldown: 8000,
+};
 
 // Calibration
-let calMin = [0, 0, 0, 0, 0];
-let calMax = [4095, 4095, 4095, 4095, 4095];
+let calMin = [0,0,0,0,0];
+let calMax = [4095,4095,4095,4095,4095];
 let autoCalPhase = null;
 let autoCalTimer = null;
 
 // Chart
-let chartInstance = null;
+let repChartInstance = null;
 
-// ══════════════════════════════════════════════════════════
-// 3. DOM REFERENCES (cached after DOMContentLoaded)
-// ══════════════════════════════════════════════════════════
+// Claude
+let claudeApiKey = localStorage.getItem('claudeApiKey') || '';
 
-let dom = {};
+// Debug mode (CV)
+const debugCV = new URLSearchParams(location.search).get('debug') === 'cv';
+let mpHands = null, mpCamera = null, cvEnabled = false;
+const MP_TIP = [4,8,12,16,20], MP_MCP = [1,5,9,13,17];
 
-// ══════════════════════════════════════════════════════════
-// 4. WEBSOCKET MODULE
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 3. HELPERS
+// ══════════════════════════════════════════════════════
+
+function getCurrentExercise() { return EXERCISES[sessionState.currentExIdx]; }
+
+function computeAvgROM() {
+  return FINGERS.reduce((s,f) => s + hwValues[f.key], 0) / FINGERS.length;
+}
+
+function computeAvgTargetROM(ex) {
+  return FINGERS.reduce((s,f) => s + ex.targetROM[f.key], 0) / FINGERS.length;
+}
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+// ══════════════════════════════════════════════════════
+// 4. WEBSOCKET
+// ══════════════════════════════════════════════════════
+
+function toggleWsRow() {
+  document.getElementById('wsRow').classList.toggle('open');
+}
 
 function toggleConnect() {
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -741,506 +1143,514 @@ function toggleConnect() {
 
 function connect(url) {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
-  setStatus('connecting');
-  try {
-    ws = new WebSocket(url);
-  } catch(e) {
-    setStatus('disconnected');
-    scheduleReconnect();
-    return;
-  }
+  setConnStatus('connecting');
+  try { ws = new WebSocket(url); }
+  catch(e) { setConnStatus('disconnected'); scheduleReconnect(); return; }
 
   ws.onopen = () => {
-    setStatus('connected');
+    setConnStatus('connected');
     manualDisconnect = false;
     reconnectAttempts = 0;
-    dom.connectBtn.textContent = 'Disconnect';
-    dom.connectBtn.classList.add('danger');
-    appendLog('system', 'WebSocket connected to ' + url);
+    document.getElementById('connectBtn').textContent = 'Disconnect';
+    document.getElementById('connectBtn').classList.add('btn-danger');
+    appendLog('system', 'Connected to glove at ' + url);
   };
-
   ws.onclose = () => {
-    setStatus('disconnected');
-    dom.connectBtn.textContent = 'Connect';
-    dom.connectBtn.classList.remove('danger');
-    markStale();
+    setConnStatus('disconnected');
+    document.getElementById('connectBtn').textContent = 'Connect';
+    document.getElementById('connectBtn').classList.remove('btn-danger');
     if (!manualDisconnect) scheduleReconnect();
   };
-
-  ws.onerror = () => setStatus('disconnected');
-
-  ws.onmessage = (e) => {
-    try {
-      const data = JSON.parse(e.data);
-      onMessage(data);
-    } catch(err) {}
-  };
+  ws.onerror = () => setConnStatus('disconnected');
+  ws.onmessage = (e) => { try { onMessage(JSON.parse(e.data)); } catch(_) {} };
 }
 
 function scheduleReconnect() {
   const delay = Math.min(500 * Math.pow(2, reconnectAttempts), 30000);
   reconnectAttempts++;
-  reconnectTimer = setTimeout(() => {
-    const url = document.getElementById('wsUrl').value.trim();
-    connect(url);
-  }, delay);
+  reconnectTimer = setTimeout(() => connect(document.getElementById('wsUrl').value.trim()), delay);
 }
 
-function setStatus(state) {
-  dom.statusDot.className = 'status-dot ' + state;
-  const el = document.getElementById('hmWs');
-  if (state === 'connected')    { el.textContent = 'ONLINE';  el.className = 'hm-val ok'; }
-  else if (state === 'connecting') { el.textContent = 'CONNECTING'; el.className = 'hm-val warn'; }
-  else                          { el.textContent = 'OFFLINE'; el.className = 'hm-val err'; }
+function setConnStatus(state) {
+  ['statusDot','footerStatusDot'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'status-dot ' + state;
+  });
+  const txt = document.getElementById('footerConnText');
+  if (txt) txt.textContent = state === 'connected' ? 'Connected' : state === 'connecting' ? 'Connecting…' : 'Disconnected';
+  const cs = document.getElementById('connStatus');
+  if (cs) cs.textContent = state.charAt(0).toUpperCase() + state.slice(1);
 }
 
-// ══════════════════════════════════════════════════════════
+function wsSend(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+}
+
+// ══════════════════════════════════════════════════════
 // 5. DATA PIPELINE
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 
 function onMessage(data) {
-  const now = Date.now();
+  FINGERS.forEach(f => { if (data[f.key] !== undefined) hwValues[f.key] = data[f.key]; });
 
-  // Latency from inter-packet arrival delta
-  if (prevArrivalTime > 0) latencyMs = now - prevArrivalTime;
-  prevArrivalTime = now;
+  if (sessionState.status === 'active') runRepStateMachine();
 
-  // Packet drop detection via firmware timestamp diff
-  if (prevFirmwareTs !== null && data.ts !== undefined) {
-    const tsDiff = data.ts - prevFirmwareTs;
-    if (tsDiff > 60) droppedPackets++;
-  }
-  if (data.ts !== undefined) prevFirmwareTs = data.ts;
-
-  // Update hardware values
-  FINGERS.forEach(f => {
-    if (data[f.key] !== undefined) hwValues[f.key] = data[f.key];
-  });
-
-  // Push to rolling history
-  const entry = { t: now, ...hwValues };
-  FINGERS.forEach(f => entry['cv_' + f.key] = cvValues[f.key]);
-  dataHistory.push(entry);
-  const cutoff = now - HISTORY_WINDOW_MS;
-  while (dataHistory.length > 0 && dataHistory[0].t < cutoff) dataHistory.shift();
-
-  // Update sample buffers for anomaly detection
-  FINGERS.forEach(f => {
-    sampleBuffers[f.key][sampleHead % SAMPLE_BUF_SIZE] = hwValues[f.key];
-    sampleCounts[f.key] = Math.min(sampleCounts[f.key] + 1, SAMPLE_BUF_SIZE);
-  });
-  sampleHead = (sampleHead + 1) % SAMPLE_BUF_SIZE;
-
-  // Update Hz counter
-  msgCount++;
-  if (now - lastHzCheck >= 1000) {
-    displayedHz = msgCount;
-    msgCount = 0;
-    lastHzCheck = now;
-  }
-
-  // Reset stale timer
-  isStale = false;
-  if (staleTimer) clearTimeout(staleTimer);
-  staleTimer = setTimeout(markStale, 500);
-
-  // Detect anomalies
-  detectAnomalies();
-
-  // Render
-  renderAll();
-
-  // Auto-trigger Claude on anomalies
-  if (anomalies.length > 0 && claudeApiKey && (now - lastClaudeCall > CLAUDE_INTERVAL_MS)) {
-    triggerClaudeAnalysis();
-  }
-}
-
-function markStale() {
-  isStale = true;
-  document.getElementById('hmLat').textContent = 'STALE';
-  document.getElementById('hmLat').className = 'hm-val err';
-}
-
-// ══════════════════════════════════════════════════════════
-// 6. RENDER MODULE
-// ══════════════════════════════════════════════════════════
-
-function renderAll() {
+  renderHand();
   renderBars();
-  renderSvgHand();
   renderStats();
-  updateChart();
-}
 
-function renderBars() {
-  FINGERS.forEach((f, i) => {
-    const v = hwValues[f.key];
-    const cv = cvValues[f.key];
-    const bar = document.getElementById('bar-hw-' + f.key);
-    const barCv = document.getElementById('bar-cv-' + f.key);
-    const pct = document.getElementById('pct-' + f.key);
-    const delta = document.getElementById('delta-' + f.key);
-    if (bar) bar.style.width = v + '%';
-    if (barCv) barCv.style.width = cv + '%';
-    if (pct) pct.textContent = v.toFixed(1) + '%';
-    if (delta && comparisonMode) {
-      const d = Math.abs(v - cv);
-      delta.textContent = 'Δ' + d.toFixed(0);
-      delta.style.color = d > 15 ? 'var(--danger)' : d > 8 ? 'var(--warn)' : 'var(--success)';
+  // Low ROM coach trigger
+  if (sessionState.status === 'active') {
+    const ex = getCurrentExercise();
+    const avg = computeAvgROM();
+    const target = computeAvgTargetROM(ex);
+    const now = Date.now();
+    if (avg < target * 0.45 && now - sessionState.lastCoachCall > sessionState.coachCooldown) {
+      triggerCoach('low_rom');
     }
-  });
-
-  if (comparisonMode) {
-    const deltas = FINGERS.map(f => Math.abs(hwValues[f.key] - cvValues[f.key]));
-    const accuracy = Math.max(0, 100 - deltas.reduce((a,b) => a+b,0) / deltas.length);
-    const badge = document.getElementById('accuracyBadge');
-    badge.textContent = 'ACC ' + accuracy.toFixed(0) + '%';
-    badge.style.background = accuracy > 85 ? '#0f2d1a' : accuracy > 70 ? '#2d1f00' : '#2d0f0f';
-    badge.style.color = accuracy > 85 ? 'var(--success)' : accuracy > 70 ? 'var(--warn)' : 'var(--danger)';
-    badge.style.border = '1px solid ' + (accuracy > 85 ? 'var(--success)' : accuracy > 70 ? 'var(--warn)' : 'var(--danger)');
-    badge.style.display = 'inline-block';
-    badge.style.fontSize = '11px';
-    badge.style.padding = '2px 8px';
-    badge.style.borderRadius = '4px';
   }
 }
 
-function renderSvgHand() {
+// ══════════════════════════════════════════════════════
+// 6. RENDER
+// ══════════════════════════════════════════════════════
+
+function renderHand() {
   FINGERS.forEach(f => {
     const v = hwValues[f.key];
-    [1, 2, 3].forEach(seg => {
+    [1,2,3].forEach(seg => {
       const el = document.getElementById('seg-' + f.key + '-' + seg);
       if (!el) return;
       if (v >= SEG_THRESHOLDS[seg]) {
         el.style.fill = f.color;
-        el.style.opacity = '0.85';
+        el.style.opacity = '0.9';
       } else {
         el.style.fill = '#21262d';
-        el.style.opacity = '0.4';
+        el.style.opacity = '0.35';
       }
     });
   });
 }
 
-function renderStats() {
-  document.getElementById('statHz').textContent = displayedHz;
-  const avg = FINGERS.reduce((s, f) => s + hwValues[f.key], 0) / 5;
-  document.getElementById('statAvg').textContent = avg.toFixed(0) + '%';
-  const peak = FINGERS.reduce((best, f) => hwValues[f.key] > hwValues[best.key] ? f : best, FINGERS[0]);
-  document.getElementById('statPeak').textContent = peak.label.substring(0, 3);
-  document.getElementById('statDropped').textContent = droppedPackets;
-
-  // Header metrics
-  document.getElementById('hmHz').textContent = displayedHz;
-  const latEl = document.getElementById('hmLat');
-  if (!isStale) {
-    latEl.textContent = latencyMs + 'ms';
-    latEl.className = 'hm-val ' + (latencyMs < 50 ? 'ok' : latencyMs < 100 ? 'warn' : 'err');
-  }
-  document.getElementById('hmPkts').textContent = droppedPackets + ' drop' + (droppedPackets !== 1 ? 's' : '');
+function renderBars() {
+  const ex = getCurrentExercise();
+  FINGERS.forEach(f => {
+    const v = hwValues[f.key];
+    const bar = document.getElementById('bar-' + f.key);
+    const pct = document.getElementById('pct-' + f.key);
+    const zone = document.getElementById('zone-' + f.key);
+    if (bar) bar.style.width = v + '%';
+    if (pct) pct.textContent = v.toFixed(0) + '%';
+    if (zone && ex) {
+      const target = ex.targetROM[f.key];
+      const low = Math.max(0, target - 12);
+      zone.style.left = low + '%';
+      zone.style.width = Math.min(100 - low, 24) + '%';
+      zone.classList.add('visible');
+    }
+  });
 }
 
-// ══════════════════════════════════════════════════════════
-// 7. CHART MODULE
-// ══════════════════════════════════════════════════════════
+function renderStats() {
+  const avg = computeAvgROM();
+  document.getElementById('statAvg').textContent = avg.toFixed(0) + '%';
+  const peak = FINGERS.reduce((b,f) => hwValues[f.key] > hwValues[b.key] ? f : b, FINGERS[0]);
+  document.getElementById('statPeak').textContent = peak.label.substring(0,3);
+  document.getElementById('statReps').textContent = sessionState.totalReps;
+  document.getElementById('sumReps').textContent = sessionState.totalReps;
+  document.getElementById('sumSets').textContent = sessionState.currentSet - 1 + (sessionState.status === 'complete' ? 1 : 0);
+  if (sessionState.repHistory.length > 0) {
+    const avgROM = sessionState.repHistory.reduce((s,r) => s + r.avgPeakROM, 0) / sessionState.repHistory.length;
+    document.getElementById('sumAvgRom').textContent = avgROM.toFixed(0) + '%';
+  }
+  if (sessionState.startTime) {
+    const elapsed = Date.now() - sessionState.startTime;
+    document.getElementById('sumTime').textContent = formatTime(elapsed);
+  }
+}
 
-function initChart() {
-  const canvas = document.getElementById('fingerChart');
-  const ctx = canvas.getContext('2d');
+// ══════════════════════════════════════════════════════
+// 7. SESSION STATE MACHINE
+// ══════════════════════════════════════════════════════
 
-  const hwDatasets = FINGERS.map((f, i) => ({
-    label: f.label + ' HW',
-    data: [],
-    borderColor: f.color,
-    borderWidth: 1.5,
-    pointRadius: 0,
-    tension: 0.2,
-    parsing: false,
-  }));
+function startSession() {
+  if (sessionState.status === 'active') return;
+  const ex = getCurrentExercise();
+  sessionState.status = 'active';
+  sessionState.startTime = Date.now();
+  sessionState.currentSet = 1;
+  sessionState.currentRep = 0;
+  sessionState.totalReps = 0;
+  sessionState.repHistory = [];
+  sessionState.chartData = [];
+  sessionState.phase = 'waiting_extend';
+  sessionState.phaseStartTime = Date.now();
+  sessionState.peakROM = {};
+  sessionState.assistSentFlex = false;
 
-  const cvDatasets = FINGERS.map((f, i) => ({
-    label: f.label + ' CV',
-    data: [],
-    borderColor: f.cvColor,
-    borderWidth: 1,
-    borderDash: [4, 4],
-    pointRadius: 0,
-    tension: 0.2,
-    parsing: false,
-    hidden: true,
-  }));
+  // Configure session from exercise
+  sessionState.repsPerSet = ex.repsPerSet;
+  sessionState.totalSets = ex.sets;
 
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: { datasets: [...hwDatasets, ...cvDatasets] },
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('pauseBtn').disabled = false;
+
+  updateSessionUI();
+  buildSetDots();
+
+  sessionState.timerInterval = setInterval(() => {
+    if (sessionState.startTime) {
+      document.getElementById('sessionTimer').textContent = formatTime(Date.now() - sessionState.startTime);
+    }
+  }, 1000);
+
+  document.getElementById('sessionDot').className = 'session-dot active';
+  document.getElementById('sessionStatus').textContent = 'Active';
+  document.getElementById('sessionTimer').classList.add('visible');
+
+  // Show chart
+  document.getElementById('chartPlaceholder').style.display = 'none';
+  document.getElementById('chartWrap').classList.add('visible');
+  initRepChart();
+
+  appendLog('system', 'Session started: ' + ex.name + ' — ' + ex.sets + ' sets × ' + ex.repsPerSet + ' reps');
+  triggerCoach('session_start');
+}
+
+function pauseSession() {
+  if (sessionState.status === 'active') {
+    sessionState.status = 'paused';
+    document.getElementById('pauseBtn').textContent = '▶ Resume';
+    document.getElementById('sessionStatus').textContent = 'Paused';
+    document.getElementById('sessionDot').className = 'session-dot';
+  } else if (sessionState.status === 'paused') {
+    sessionState.status = 'active';
+    document.getElementById('pauseBtn').textContent = '⏸ Pause';
+    document.getElementById('sessionStatus').textContent = 'Active';
+    document.getElementById('sessionDot').className = 'session-dot active';
+  }
+}
+
+function nextExercise() {
+  const idx = (sessionState.currentExIdx + 1) % EXERCISES.length;
+  sessionState.currentExIdx = idx;
+  document.getElementById('exSelector').value = EXERCISES[idx].id;
+  onExerciseChange();
+}
+
+function onExerciseChange() {
+  const sel = document.getElementById('exSelector').value;
+  const idx = EXERCISES.findIndex(e => e.id === sel);
+  if (idx >= 0) sessionState.currentExIdx = idx;
+  const ex = EXERCISES[sessionState.currentExIdx];
+  document.getElementById('exName').textContent = ex.name;
+  document.getElementById('exDesc').textContent = ex.description;
+  document.getElementById('exGuide').textContent = ex.guide;
+  document.getElementById('repTotal').textContent = ex.repsPerSet;
+  buildSetDots();
+  renderBars();
+}
+
+function runRepStateMachine() {
+  const ex = getCurrentExercise();
+  const avg = computeAvgROM();
+  const flexThresh = computeAvgTargetROM(ex) * 0.75;
+  const extendThresh = 30;
+  const now = Date.now();
+  const elapsed = now - (sessionState.phaseStartTime || now);
+
+  switch (sessionState.phase) {
+    case 'waiting_extend':
+      highlightPhase('extend');
+      if (avg < extendThresh && elapsed > 300) {
+        transitionPhase('extending');
+      }
+      break;
+
+    case 'extending':
+      highlightPhase('extend');
+      if (!sessionState.assistSentFlex && sessionState.assistMode) {
+        sendServoAssist('flex');
+        sessionState.assistSentFlex = true;
+      }
+      if (avg >= flexThresh) {
+        sessionState.peakROM = {};
+        FINGERS.forEach(f => sessionState.peakROM[f.key] = hwValues[f.key]);
+        transitionPhase('hold_flex');
+      }
+      break;
+
+    case 'hold_flex':
+      highlightPhase('flex');
+      // Track peak
+      FINGERS.forEach(f => {
+        if (hwValues[f.key] > (sessionState.peakROM[f.key] || 0))
+          sessionState.peakROM[f.key] = hwValues[f.key];
+      });
+      if (avg < flexThresh * 0.85) {
+        transitionPhase('extending'); // lost hold
+        return;
+      }
+      if (elapsed >= ex.holdDuration) {
+        countRep();
+        sessionState.assistSentFlex = false;
+        if (sessionState.assistMode) sendServoRelease();
+        transitionPhase('releasing');
+      }
+      break;
+
+    case 'releasing':
+      highlightPhase('extend');
+      if (avg < extendThresh) transitionPhase('waiting_extend');
+      break;
+  }
+}
+
+function transitionPhase(phase) {
+  sessionState.phase = phase;
+  sessionState.phaseStartTime = Date.now();
+}
+
+function highlightPhase(active) {
+  ['extend','hold','flex','rest'].forEach(p => {
+    const el = document.getElementById('phase' + p.charAt(0).toUpperCase() + p.slice(1));
+    if (el) el.classList.toggle('active', p === active);
+  });
+}
+
+function countRep() {
+  const ex = getCurrentExercise();
+  const avgPeak = FINGERS.reduce((s,f) => s + (sessionState.peakROM[f.key]||0), 0) / FINGERS.length;
+  sessionState.currentRep++;
+  sessionState.totalReps++;
+
+  sessionState.repHistory.push({
+    set: sessionState.currentSet,
+    rep: sessionState.currentRep,
+    peakROM: { ...sessionState.peakROM },
+    avgPeakROM: avgPeak,
+    timestamp: Date.now(),
+  });
+
+  sessionState.chartData.push({
+    rep: sessionState.totalReps,
+    avgROM: avgPeak,
+    targetAvgROM: computeAvgTargetROM(ex),
+  });
+
+  document.getElementById('repCurrent').textContent = sessionState.currentRep;
+  updateSessionChart();
+  renderStats();
+
+  if (sessionState.currentRep % 5 === 0) triggerCoach('rep_milestone');
+  if (sessionState.currentRep >= sessionState.repsPerSet) completeSet();
+}
+
+function completeSet() {
+  triggerCoach('set_complete');
+  if (sessionState.currentSet >= sessionState.totalSets) {
+    completeSession();
+    return;
+  }
+  sessionState.currentSet++;
+  sessionState.currentRep = 0;
+  sessionState.status = 'resting';
+  sessionState.phase = 'idle';
+  document.getElementById('repCurrent').textContent = '0';
+  buildSetDots();
+
+  document.getElementById('sessionDot').className = 'session-dot resting';
+  document.getElementById('sessionStatus').textContent = 'Resting';
+  document.getElementById('restDisplay').classList.add('visible');
+
+  let remaining = sessionState.restDuration;
+  sessionState.restInterval = setInterval(() => {
+    remaining -= 1000;
+    document.getElementById('restTimerVal').textContent = formatTime(remaining);
+    if (remaining <= 0) {
+      clearInterval(sessionState.restInterval);
+      document.getElementById('restDisplay').classList.remove('visible');
+      sessionState.status = 'active';
+      sessionState.phase = 'waiting_extend';
+      sessionState.phaseStartTime = Date.now();
+      document.getElementById('sessionDot').className = 'session-dot active';
+      document.getElementById('sessionStatus').textContent = 'Active';
+      appendLog('system', 'Rest complete — starting Set ' + sessionState.currentSet);
+    }
+  }, 1000);
+}
+
+function completeSession() {
+  sessionState.status = 'complete';
+  clearInterval(sessionState.timerInterval);
+  document.getElementById('sessionDot').className = 'session-dot complete';
+  document.getElementById('sessionStatus').textContent = 'Complete';
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('startBtn').textContent = '↺ Restart';
+  document.getElementById('pauseBtn').disabled = true;
+  highlightPhase('rest');
+  triggerCoach('session_end');
+  renderStats();
+}
+
+function updateSessionUI() {
+  document.getElementById('repCurrent').textContent = sessionState.currentRep;
+  buildSetDots();
+}
+
+function buildSetDots() {
+  const ex = getCurrentExercise();
+  const sets = sessionState.totalSets || ex.sets;
+  const container = document.getElementById('setDots');
+  container.innerHTML = '';
+  for (let i = 1; i <= sets; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'set-dot';
+    if (i < sessionState.currentSet) dot.classList.add('done');
+    else if (i === sessionState.currentSet) dot.classList.add('current');
+    container.appendChild(dot);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// 8. CHART
+// ══════════════════════════════════════════════════════
+
+function initRepChart() {
+  if (repChartInstance) { repChartInstance.destroy(); repChartInstance = null; }
+  const ctx = document.getElementById('repChart').getContext('2d');
+  repChartInstance = new Chart(ctx, {
+    data: {
+      labels: [],
+      datasets: [
+        {
+          type: 'bar',
+          label: 'ROM',
+          data: [],
+          backgroundColor: '#00c9a766',
+          borderColor: '#00c9a7',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          type: 'line',
+          label: 'Target',
+          data: [],
+          borderColor: '#fbbf2488',
+          borderDash: [4,3],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ]
+    },
     options: {
       animation: false,
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { intersect: false },
       scales: {
         x: {
-          type: 'linear',
-          min: -HISTORY_WINDOW_MS,
-          max: 0,
-          ticks: { display: false },
-          grid: { color: '#21262d', lineWidth: 0.5 },
-          border: { color: '#21262d' },
+          ticks: { color: '#64748b', font: { family: 'monospace', size: 9 }, maxTicksLimit: 8 },
+          grid: { color: '#1e2530' },
+          border: { color: '#1e2530' },
         },
         y: {
-          min: 0,
-          max: 100,
-          ticks: { color: '#8b949e', font: { family: 'monospace', size: 10 }, stepSize: 25 },
-          grid: { color: '#21262d', lineWidth: 0.5 },
-          border: { color: '#21262d' },
+          min: 0, max: 100,
+          ticks: { color: '#64748b', font: { family: 'monospace', size: 9 }, stepSize: 25 },
+          grid: { color: '#1e2530' },
+          border: { color: '#1e2530' },
         }
       },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: true,
-          backgroundColor: '#161b22',
-          borderColor: '#21262d',
-          borderWidth: 1,
-          titleColor: '#8b949e',
-          bodyColor: '#c9d1d9',
-          titleFont: { family: 'monospace', size: 10 },
-          bodyFont: { family: 'monospace', size: 11 },
-        }
-      }
+      plugins: { legend: { display: false } }
     }
   });
-
-  buildChartLegend();
 }
 
-function buildChartLegend() {
-  const container = document.getElementById('chartLegend');
-  FINGERS.forEach((f, i) => {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = `<span class="legend-dot" style="background:${f.color}"></span>${f.label}`;
-    item.onclick = () => {
-      const meta = chartInstance.getDatasetMeta(i);
-      meta.hidden = !meta.hidden;
-      chartInstance.update('none');
-      item.style.opacity = meta.hidden ? '0.4' : '1';
-    };
-    container.appendChild(item);
-  });
+function updateSessionChart() {
+  if (!repChartInstance) return;
+  const data = sessionState.chartData;
+  repChartInstance.data.labels = data.map(d => d.rep);
+  repChartInstance.data.datasets[0].data = data.map(d => d.avgROM);
+  repChartInstance.data.datasets[1].data = data.map(d => d.targetAvgROM);
+  repChartInstance.update('none');
 }
 
-function updateChart() {
-  if (!chartInstance) return;
-  const now = Date.now();
-  FINGERS.forEach((f, i) => {
-    chartInstance.data.datasets[i].data = dataHistory.map(d => ({ x: d.t - now, y: d[f.key] }));
-    chartInstance.data.datasets[i + 5].data = dataHistory.map(d => ({ x: d.t - now, y: d['cv_' + f.key] ?? null }));
+// ══════════════════════════════════════════════════════
+// 9. SERVO CONTROL
+// ══════════════════════════════════════════════════════
+
+function sendServoAssist(direction) {
+  if (!sessionState.assistMode) return;
+  const position = direction === 'flex' ? sessionState.assistLevel : 0;
+  const allSame = FINGERS.every(f => {
+    const fa = sessionState.fingerAssist[f.key];
+    return fa.enabled && fa.level === sessionState.assistLevel;
   });
-  chartInstance.update('none');
-}
-
-// ══════════════════════════════════════════════════════════
-// 8. MEDIAPIPE MODULE
-// ══════════════════════════════════════════════════════════
-
-function dist3d(a, b) {
-  return Math.sqrt((a.x-b.x)**2 + (a.y-b.y)**2 + (a.z-b.z)**2);
-}
-
-function computeCurlFromLandmarks(landmarks) {
-  const wrist = landmarks[0];
-  const result = {};
-  FINGERS.forEach((f, i) => {
-    const tip = landmarks[MP_TIP[i]];
-    const mcp = landmarks[MP_MCP[i]];
-    const tipDist = dist3d(tip, wrist);
-    const mcpDist = dist3d(mcp, wrist);
-    result[f.key] = mcpDist < 0.001 ? 0 : Math.max(0, Math.min(100, (1 - tipDist / mcpDist) * 100));
-  });
-  return result;
-}
-
-function initMediaPipe() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    document.getElementById('cvWarn').style.display = 'block';
-    return false;
-  }
-
-  const videoEl = document.getElementById('cvVideo');
-  const previewCanvas = document.getElementById('cvPreview');
-  const previewCtx = previewCanvas.getContext('2d');
-
-  mpHands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
-  });
-
-  mpHands.setOptions({
-    maxNumHands: 1,
-    modelComplexity: 0,
-    minDetectionConfidence: 0.7,
-    minTrackingConfidence: 0.5,
-  });
-
-  mpHands.onResults((results) => {
-    // Draw preview
-    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-    if (videoEl.readyState >= 2) {
-      previewCtx.drawImage(videoEl, 0, 0, previewCanvas.width, previewCanvas.height);
-    }
-
-    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      cvValues = computeCurlFromLandmarks(results.multiHandLandmarks[0]);
-      document.getElementById('hmCv').textContent = 'LIVE';
-      document.getElementById('hmCv').className = 'hm-val ok';
-    } else {
-      document.getElementById('hmCv').textContent = 'NO HAND';
-      document.getElementById('hmCv').className = 'hm-val warn';
-    }
-
-    // Inject CV into last history entry
-    if (dataHistory.length > 0) {
-      const last = dataHistory[dataHistory.length - 1];
-      FINGERS.forEach(f => last['cv_' + f.key] = cvValues[f.key]);
-    }
-
-    if (comparisonMode) renderBars();
-  });
-
-  mpCamera = new Camera(videoEl, {
-    onFrame: async () => {
-      if (mpHands) await mpHands.send({ image: videoEl });
-    },
-    width: 320,
-    height: 240,
-  });
-
-  return true;
-}
-
-function toggleCV() {
-  if (!cvEnabled) {
-    if (!mpHands) {
-      if (!initMediaPipe()) return;
-    }
-    mpCamera.start();
-    cvEnabled = true;
-    document.getElementById('cvBtn').textContent = 'Disable CV';
-    document.getElementById('cvBtn').classList.add('active');
-    document.getElementById('cvContainer').classList.add('visible');
-    document.getElementById('hmCv').textContent = 'INIT';
-    document.getElementById('hmCv').className = 'hm-val warn';
+  if (allSame) {
+    wsSend({ cmd: 'servo_all', position, speed: 50 });
   } else {
-    mpCamera.stop();
-    cvEnabled = false;
-    document.getElementById('cvBtn').textContent = 'Enable CV';
-    document.getElementById('cvBtn').classList.remove('active');
-    document.getElementById('cvContainer').classList.remove('visible');
-    document.getElementById('hmCv').textContent = 'OFF';
-    document.getElementById('hmCv').className = 'hm-val';
+    FINGERS.forEach((f,i) => {
+      const fa = sessionState.fingerAssist[f.key];
+      if (fa.enabled) wsSend({ cmd: 'servo', finger: i, position: direction === 'flex' ? fa.level : 0, speed: 50 });
+    });
   }
 }
 
-// ══════════════════════════════════════════════════════════
-// 9. COMPARISON MODE
-// ══════════════════════════════════════════════════════════
+function sendServoRelease() { wsSend({ cmd: 'servo_release' }); }
 
-function toggleComparison() {
-  comparisonMode = !comparisonMode;
-  const btn = document.getElementById('cmpBtn');
-  btn.classList.toggle('active', comparisonMode);
-
-  // Show/hide CV bar fills
-  document.querySelectorAll('.bar-fill-cv').forEach(el => {
-    el.style.display = comparisonMode ? 'block' : 'none';
-  });
-  document.querySelectorAll('.delta-label').forEach(el => {
-    el.style.display = comparisonMode ? 'block' : 'none';
-  });
-
-  // Show/hide CV chart datasets
-  if (chartInstance) {
-    for (let i = 5; i < 10; i++) {
-      chartInstance.data.datasets[i].hidden = !comparisonMode;
-    }
-    chartInstance.update('none');
-  }
-
-  if (!comparisonMode) {
-    document.getElementById('accuracyBadge').style.display = 'none';
-  }
+function onAssistModeToggle() {
+  const s = sessionState;
+  s.assistMode = !s.assistMode;
+  const btn = document.getElementById('assistToggle');
+  btn.classList.toggle('on', s.assistMode);
+  document.getElementById('assistModeLabel').textContent = s.assistMode ? 'ON' : 'OFF';
+  if (!s.assistMode) sendServoRelease();
+  updateFingerServoUI();
 }
 
-// ══════════════════════════════════════════════════════════
-// 10. ANOMALY DETECTION MODULE
-// ══════════════════════════════════════════════════════════
-
-function getLast(buf, head, n, count) {
-  const available = Math.min(n, count);
-  const result = [];
-  for (let i = available - 1; i >= 0; i--) {
-    result.push(buf[(head - 1 - i + SAMPLE_BUF_SIZE) % SAMPLE_BUF_SIZE]);
-  }
-  return result;
-}
-
-function linearSlope(arr) {
-  const n = arr.length;
-  if (n < 2) return 0;
-  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-  for (let i = 0; i < n; i++) {
-    sumX += i; sumY += arr[i]; sumXY += i * arr[i]; sumX2 += i * i;
-  }
-  const denom = n * sumX2 - sumX * sumX;
-  return denom === 0 ? 0 : (n * sumXY - sumX * sumY) / denom;
-}
-
-function detectAnomalies() {
-  const found = [];
+function onAssistLevelChange(val) {
+  sessionState.assistLevel = +val;
+  document.getElementById('assistLevelVal').textContent = val + '%';
   FINGERS.forEach(f => {
-    const count = sampleCounts[f.key];
-    const head = sampleHead;
-
-    if (count >= 20) {
-      const slice20 = getLast(sampleBuffers[f.key], head, 20, count);
-      const mean20 = slice20.reduce((a,b) => a+b, 0) / slice20.length;
-      const variance = slice20.reduce((a,b) => a + (b - mean20) ** 2, 0) / slice20.length;
-      const stddev = Math.sqrt(variance);
-      if (stddev > 5) found.push({ finger: f.key, type: 'jitter', detail: 'σ=' + stddev.toFixed(1) });
-    }
-
-    if (count >= 50) {
-      const slice50 = getLast(sampleBuffers[f.key], head, 50, count);
-      const mean50 = slice50.reduce((a,b) => a+b, 0) / slice50.length;
-      if (mean50 < 8) found.push({ finger: f.key, type: 'baseline_low', detail: 'mean=' + mean50.toFixed(1) + '%' });
-      if (mean50 > 92) found.push({ finger: f.key, type: 'baseline_high', detail: 'mean=' + mean50.toFixed(1) + '%' });
-    }
-
-    if (count >= 80) {
-      const slice80 = getLast(sampleBuffers[f.key], head, 80, count);
-      const slope = linearSlope(slice80);
-      if (Math.abs(slope) > 0.15) found.push({ finger: f.key, type: 'drift', detail: 'slope=' + slope.toFixed(3) });
-    }
+    if (sessionState.fingerAssist[f.key].enabled)
+      sessionState.fingerAssist[f.key].level = +val;
   });
-
-  anomalies = found;
-
-  // Update anomaly bar
-  const bar = document.getElementById('anomalyBar');
-  if (found.length === 0) {
-    bar.innerHTML = '<span class="anomaly-tag ok">ALL NOMINAL</span>';
-  } else {
-    bar.innerHTML = found.slice(0, 6).map(a => {
-      const cls = a.type === 'jitter' ? 'jitter' : '';
-      return `<span class="anomaly-tag ${cls}">${a.finger.substring(0,3).toUpperCase()} ${a.type} ${a.detail}</span>`;
-    }).join('');
-  }
+  updateFingerServoUI();
 }
 
-// ══════════════════════════════════════════════════════════
-// 11. CLAUDE API MODULE
-// ══════════════════════════════════════════════════════════
+function onFingerAssistToggle(key) {
+  const fa = sessionState.fingerAssist[key];
+  fa.enabled = !fa.enabled;
+  if (!fa.enabled) {
+    const i = FINGERS.findIndex(f => f.key === key);
+    wsSend({ cmd: 'servo', finger: i, position: 0, speed: 50 });
+  }
+  updateFingerServoUI();
+  // Also update center panel toggles
+  const btn = document.getElementById('fassist-' + key);
+  if (btn) btn.classList.toggle('on', fa.enabled);
+}
+
+function onFingerLevelChange(key, val) {
+  sessionState.fingerAssist[key].level = +val;
+  document.getElementById('fslider-val-' + key).textContent = val + '%';
+}
+
+function updateFingerServoUI() {
+  FINGERS.forEach(f => {
+    const fa = sessionState.fingerAssist[f.key];
+    const row = document.getElementById('frow-' + f.key);
+    const toggle = document.getElementById('ftoggle-' + f.key);
+    const slider = document.getElementById('fslider-' + f.key);
+    if (row) row.classList.toggle('disabled', !fa.enabled || !sessionState.assistMode);
+    if (toggle) toggle.classList.toggle('on', fa.enabled);
+    if (slider) slider.disabled = !fa.enabled || !sessionState.assistMode;
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// 10. THERAPY COACH (CLAUDE)
+// ══════════════════════════════════════════════════════
 
 function saveApiKey() {
   claudeApiKey = document.getElementById('claudeKeyInput').value.trim();
@@ -1248,46 +1658,33 @@ function saveApiKey() {
   appendLog('system', 'API key saved.');
 }
 
-async function triggerClaudeAnalysis() {
+async function triggerCoach(trigger) {
   if (!claudeApiKey) {
-    appendLog('system', 'No API key — enter your Anthropic key and click Save.');
+    if (trigger === 'manual') appendLog('system', 'Enter your Anthropic API key above to enable the therapy coach.');
     return;
   }
   const now = Date.now();
-  if (now - lastClaudeCall < CLAUDE_INTERVAL_MS) return;
-  lastClaudeCall = now;
+  if (now - sessionState.lastCoachCall < sessionState.coachCooldown && trigger !== 'manual') return;
+  sessionState.lastCoachCall = now;
 
-  const fingerStats = FINGERS.map(f => {
-    const count = sampleCounts[f.key];
-    if (count < 5) return `${f.label}: insufficient data`;
-    const slice = getLast(sampleBuffers[f.key], sampleHead, Math.min(50, count), count);
-    const mean = slice.reduce((a,b)=>a+b,0)/slice.length;
-    const variance = slice.reduce((a,b)=>a+(b-mean)**2,0)/slice.length;
-    const stddev = Math.sqrt(variance);
-    const cvVal = cvValues[f.key];
-    const cvStr = cvEnabled ? ` | CV=${cvVal.toFixed(1)}% Δ=${Math.abs(hwValues[f.key]-cvVal).toFixed(1)}` : '';
-    return `${f.label}: HW=${hwValues[f.key].toFixed(1)}% mean=${mean.toFixed(1)}% σ=${stddev.toFixed(1)}${cvStr}`;
-  }).join('\n');
+  const ex = getCurrentExercise();
+  const romSummary = FINGERS.map(f =>
+    `${f.label}: ${hwValues[f.key].toFixed(0)}% (target ${ex.targetROM[f.key]}%)`
+  ).join(', ');
+  const s = sessionState;
+  const lastRep = s.repHistory[s.repHistory.length - 1];
 
-  const anomalyDesc = anomalies.length === 0
-    ? 'None'
-    : anomalies.map(a => `${a.finger} ${a.type}: ${a.detail}`).join(', ');
-
-  const prompt = `You are an expert in ESP32 flex-sensor glove calibration and gesture recognition.
-
-Live finger extension data (0%=curled, 100%=extended):
-${fingerStats}
-
-Detected sensor issues: ${anomalyDesc}
-Update rate: ${displayedHz} Hz | Latency: ${latencyMs}ms | Dropped packets: ${droppedPackets}
-CV comparison: ${cvEnabled && comparisonMode ? 'active' : 'inactive'}
-
-In 2-4 concise sentences: diagnose anomalies, suggest calibration steps if needed, and identify the current hand gesture if recognizable.`;
-
-  appendLog('system', 'Requesting analysis...');
+  const triggerContext = {
+    session_start: `Patient is beginning their first set.`,
+    rep_milestone: `Patient completed rep ${s.currentRep}. Last peak ROM: ${lastRep ? lastRep.avgPeakROM.toFixed(0) : '?'}%.`,
+    set_complete:  `Patient completed Set ${s.currentSet - 1}/${s.totalSets}. Now resting for 30 seconds.`,
+    low_rom:       `Patient's ROM is well below target — possible pain or fatigue. Current avg: ${computeAvgROM().toFixed(0)}%, target: ${computeAvgTargetROM(ex).toFixed(0)}%.`,
+    session_end:   `Session complete! Total: ${s.totalReps} reps over ${s.totalSets} sets. Avg ROM: ${s.repHistory.length > 0 ? (s.repHistory.reduce((a,r)=>a+r.avgPeakROM,0)/s.repHistory.length).toFixed(0) : '?'}%.`,
+    manual:        `Patient requested a check-in.`,
+  }[trigger] || `General update.`;
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1297,123 +1694,143 @@ In 2-4 concise sentences: diagnose anomalies, suggest calibration steps if neede
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 256,
-        messages: [{ role: 'user', content: prompt }]
+        max_tokens: 180,
+        messages: [{ role: 'user', content:
+`You are HandFlow, a warm and encouraging hand therapy coach for arthritis patients.
+Exercise: ${ex.name} — ${ex.description}
+ROM readings: ${romSummary}
+Session: Set ${s.currentSet}/${s.totalSets}, Rep ${s.currentRep}/${ex.repsPerSet}
+Event: ${triggerContext}
+
+Respond in 2-3 warm sentences. Celebrate progress, give gentle form tips if ROM is low, and be encouraging. Speak directly to the patient. Do not mention technical terms like Hz, latency, or packets.`
+        }]
       })
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      appendLog('error', 'API error: ' + (err.error?.message || response.status));
-      return;
-    }
-    const result = await response.json();
+    if (!resp.ok) { const e = await resp.json().catch(()=>({})); appendLog('error', 'Coach error: ' + (e.error?.message || resp.status)); return; }
+    const result = await resp.json();
     appendLog('assistant', result.content[0].text);
-  } catch(err) {
-    appendLog('error', 'Network error: ' + err.message);
+  } catch(e) {
+    appendLog('error', 'Network error: ' + e.message);
   }
 }
 
 function appendLog(role, text) {
-  const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
-  const logEl = document.getElementById('analysisLog');
+  const ts = new Date().toLocaleTimeString('en-US',{hour12:false,hour:'2-digit',minute:'2-digit'});
+  const logEl = document.getElementById('coachLog');
   const entry = document.createElement('div');
   entry.className = 'log-entry log-' + role;
-  const tsEl = document.createElement('span');
-  tsEl.className = 'log-ts';
-  tsEl.textContent = ts;
-  const textEl = document.createElement('span');
-  textEl.className = 'log-text';
-  textEl.textContent = text;
-  entry.appendChild(tsEl);
-  entry.appendChild(textEl);
+  entry.innerHTML = `<span class="log-ts">${ts}</span><span class="log-text">${text}</span>`;
   logEl.appendChild(entry);
   logEl.scrollTop = logEl.scrollHeight;
-  // Keep log from growing unbounded
-  while (logEl.children.length > 80) logEl.removeChild(logEl.firstChild);
+  while (logEl.children.length > 60) logEl.removeChild(logEl.firstChild);
 }
 
-// ══════════════════════════════════════════════════════════
-// 12. CALIBRATION MODULE
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 11. CALIBRATION
+// ══════════════════════════════════════════════════════
 
-function sendCal(fingerIndex, type) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    appendLog('error', 'Not connected to ESP32');
-    return;
-  }
-  ws.send(JSON.stringify({ cmd: 'calibrate', finger: fingerIndex, type: type }));
-  // Track locally for display (approximate — firmware uses raw ADC)
-  if (type === 'min') calMin[fingerIndex] = Math.round(hwValues[FINGERS[fingerIndex].key]);
-  else calMax[fingerIndex] = Math.round(hwValues[FINGERS[fingerIndex].key]);
-  updateCalDisplay(fingerIndex);
+function toggleCalPopup() {
+  document.getElementById('calPopup').classList.toggle('open');
 }
 
-function updateCalDisplay(i) {
+function sendCal(i, type) {
+  wsSend({ cmd: 'calibrate', finger: i, type });
+  if (type === 'min') calMin[i] = Math.round(hwValues[FINGERS[i].key]);
+  else calMax[i] = Math.round(hwValues[FINGERS[i].key]);
   const el = document.getElementById('calRange-' + i);
   if (el) el.textContent = calMin[i] + '/' + calMax[i];
 }
 
 function startAutoCalibration() {
   if (autoCalPhase !== null) return;
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    appendLog('error', 'Not connected — cannot calibrate');
-    return;
-  }
   autoCalPhase = 'fist';
-  const btn = document.getElementById('autoCalBtn');
-  btn.textContent = 'Fist... 3s';
-  btn.classList.add('warn');
-  appendLog('system', 'AUTO-CAL: Make a fist and hold for 3 seconds...');
-
+  document.getElementById('autoCalBtn').textContent = 'Fist... 3s';
+  appendLog('system', 'Auto-Cal: Make a fist and hold for 3 seconds…');
   autoCalTimer = setTimeout(() => {
-    FINGERS.forEach((f, i) => sendCal(i, 'min'));
-    appendLog('system', 'MIN captured. Open hand fully and hold for 3 seconds...');
-    btn.textContent = 'Open... 3s';
+    FINGERS.forEach((_,i) => sendCal(i, 'min'));
+    appendLog('system', 'MIN set. Open your hand fully and hold for 3 seconds…');
+    document.getElementById('autoCalBtn').textContent = 'Open... 3s';
     autoCalPhase = 'open';
-
     autoCalTimer = setTimeout(() => {
-      FINGERS.forEach((f, i) => sendCal(i, 'max'));
-      appendLog('system', 'AUTO-CAL complete. All 5 fingers calibrated.');
+      FINGERS.forEach((_,i) => sendCal(i, 'max'));
+      appendLog('system', 'Auto-Cal complete — all fingers calibrated.');
       autoCalPhase = null;
-      btn.textContent = 'Auto-Cal';
-      btn.classList.remove('warn');
+      document.getElementById('autoCalBtn').textContent = 'Auto-Cal';
     }, 3000);
   }, 3000);
 }
 
-// ══════════════════════════════════════════════════════════
-// 13. BUILD DYNAMIC UI
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 12. BUILD DYNAMIC UI
+// ══════════════════════════════════════════════════════
 
 function buildBarsUI() {
-  const container = document.getElementById('barsContainer');
-  FINGERS.forEach((f, i) => {
+  const c = document.getElementById('barsContainer');
+  FINGERS.forEach(f => {
     const row = document.createElement('div');
     row.className = 'finger-row';
     row.innerHTML = `
       <span class="finger-label">${f.label}</span>
       <div class="bar-track">
-        <div class="bar-fill" id="bar-hw-${f.key}" style="background:${f.color}"></div>
-        <div class="bar-fill-cv" id="bar-cv-${f.key}" style="background:${f.cvColor}"></div>
+        <div class="bar-fill" id="bar-${f.key}" style="background:${f.color}"></div>
+        <div class="bar-target-zone" id="zone-${f.key}"></div>
       </div>
       <span class="pct-label" id="pct-${f.key}">0%</span>
-      <span class="delta-label" id="delta-${f.key}"></span>
     `;
-    container.appendChild(row);
+    c.appendChild(row);
+  });
+}
+
+function buildFingerAssistRow() {
+  const c = document.getElementById('fingerAssistRow');
+  FINGERS.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'finger-assist-btn' + (sessionState.fingerAssist[f.key].enabled ? ' on' : '');
+    btn.id = 'fassist-' + f.key;
+    btn.innerHTML = `<span class="dot"></span>${f.label.substring(0,1)}`;
+    btn.onclick = () => onFingerAssistToggle(f.key);
+    c.appendChild(btn);
+  });
+}
+
+function buildFingerServoRows() {
+  const c = document.getElementById('fingerServoRows');
+  FINGERS.forEach(f => {
+    const fa = sessionState.fingerAssist[f.key];
+    const row = document.createElement('div');
+    row.className = 'finger-servo-row' + (fa.enabled ? '' : ' disabled');
+    row.id = 'frow-' + f.key;
+    row.innerHTML = `
+      <span class="flbl">${f.label.substring(0,3)}</span>
+      <button class="toggle-btn${fa.enabled ? ' on' : ''}" id="ftoggle-${f.key}" onclick="onFingerAssistToggle('${f.key}')"></button>
+      <input type="range" id="fslider-${f.key}" min="0" max="100" value="${fa.level}" ${fa.enabled ? '' : 'disabled'}
+        oninput="onFingerLevelChange('${f.key}', this.value)">
+      <span class="slider-val" id="fslider-val-${f.key}">${fa.level}%</span>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function buildExerciseSelector() {
+  const sel = document.getElementById('exSelector');
+  EXERCISES.forEach(ex => {
+    const opt = document.createElement('option');
+    opt.value = ex.id;
+    opt.textContent = ex.name;
+    sel.appendChild(opt);
   });
 }
 
 function buildCalUI() {
   const grid = document.getElementById('calGrid');
-  FINGERS.forEach((f, i) => {
+  FINGERS.forEach((f,i) => {
     const col = document.createElement('div');
     col.className = 'cal-finger';
     col.innerHTML = `
-      <span class="cal-finger-label">${f.label.substring(0,3).toUpperCase()}</span>
-      <div class="cal-finger-btns">
-        <button class="eng-btn sm min-btn" onclick="sendCal(${i},'min')">MIN</button>
-        <button class="eng-btn sm max-btn" onclick="sendCal(${i},'max')">MAX</button>
+      <span class="cal-flabel">${f.label.substring(0,3).toUpperCase()}</span>
+      <div class="cal-btns">
+        <button class="btn btn-min" onclick="sendCal(${i},'min')">MIN</button>
+        <button class="btn btn-max" onclick="sendCal(${i},'max')">MAX</button>
       </div>
       <span class="cal-range" id="calRange-${i}">—/—</span>
     `;
@@ -1421,25 +1838,53 @@ function buildCalUI() {
   });
 }
 
-// ══════════════════════════════════════════════════════════
-// 14. INITIALIZATION
-// ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// 13. DEBUG: MEDIAPIPE CV (activated via ?debug=cv)
+// ══════════════════════════════════════════════════════
+
+function dist3d(a,b) { return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2+(a.z-b.z)**2); }
+
+function initMediaPipe() {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  const videoEl = document.getElementById('cvVideo');
+  mpHands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}` });
+  mpHands.setOptions({ maxNumHands:1, modelComplexity:0, minDetectionConfidence:0.7, minTrackingConfidence:0.5 });
+  mpHands.onResults(results => {
+    if (results.multiHandLandmarks?.length > 0) {
+      const lm = results.multiHandLandmarks[0];
+      const wrist = lm[0];
+      FINGERS.forEach((f,i) => {
+        const tip = lm[MP_TIP[i]], mcp = lm[MP_MCP[i]];
+        const d = dist3d(mcp, wrist);
+        if (d > 0.001) hwValues[f.key] = Math.max(0, Math.min(100, (1 - dist3d(tip,wrist)/d)*100));
+      });
+    }
+  });
+  mpCamera = new Camera(videoEl, { onFrame: async () => mpHands && await mpHands.send({image:videoEl}), width:320, height:240 });
+  mpCamera.start();
+}
+
+// ══════════════════════════════════════════════════════
+// 14. INIT
+// ══════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Cache DOM refs
-  dom.statusDot  = document.getElementById('statusDot');
-  dom.connectBtn = document.getElementById('connectBtn');
-  dom.wsUrl      = document.getElementById('wsUrl');
-
-  // Restore API key
   if (claudeApiKey) document.getElementById('claudeKeyInput').value = claudeApiKey;
 
-  // Build dynamic UI
+  buildExerciseSelector();
   buildBarsUI();
+  buildFingerAssistRow();
+  buildFingerServoRows();
   buildCalUI();
-  initChart();
+  buildSetDots();
 
-  appendLog('system', 'GloveOS ready. Connect to ESP32 WebSocket to begin.');
+  // Init first exercise display
+  onExerciseChange();
+
+  // Debug: CV
+  if (debugCV) initMediaPipe();
+
+  appendLog('system', 'HandFlow ready. Connect your glove and select an exercise.');
 });
 </script>
 </body>
